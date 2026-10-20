@@ -1,0 +1,159 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/utils/date_util.dart';
+import '../../data/models/transaction.dart';
+import '../../state/category_providers.dart';
+import '../../state/transaction_providers.dart';
+import '../widgets/transaction_detail_sheet.dart';
+import '../widgets/transaction_tile.dart';
+
+/// 交易列表页：时间倒序、类型/分类筛选、点击查看/编辑/删除。
+class TransactionListPage extends ConsumerStatefulWidget {
+  const TransactionListPage({super.key});
+
+  @override
+  ConsumerState<TransactionListPage> createState() =>
+      _TransactionListPageState();
+}
+
+class _TransactionListPageState extends ConsumerState<TransactionListPage> {
+  /// null=全部，0=支出，1=收入
+  int? _typeFilter;
+
+  /// null=全部分类
+  int? _categoryFilter;
+
+  @override
+  Widget build(BuildContext context) {
+    final transactions = ref.watch(transactionProvider);
+    final categories = ref.watch(categoryProvider);
+    final categoryByKey = {for (final c in categories) c.key as int: c};
+
+    // 分类筛选下拉的候选项：跟随类型筛选
+    final filterableCategories = categories
+        .where((c) => _typeFilter == null || c.type == _typeFilter)
+        .toList();
+    final filterIds = filterableCategories.map((c) => c.key as int).toSet();
+    if (_categoryFilter != null && !filterIds.contains(_categoryFilter)) {
+      // 类型切换后清空失效的分类筛选
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _categoryFilter = null);
+      });
+    }
+
+    final filtered = transactions
+        .where((t) {
+          if (_typeFilter != null && t.type != _typeFilter) return false;
+          if (_categoryFilter != null && t.categoryId != _categoryFilter) {
+            return false;
+          }
+          return true;
+        })
+        .toList(growable: false);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('交易明细')),
+      body: Column(
+        children: [
+          // 筛选栏：类型 + 分类
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Row(
+              children: [
+                SegmentedButton<int?>(
+                  showSelectedIcon: false,
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  segments: const [
+                    ButtonSegment(value: null, label: Text('全部')),
+                    ButtonSegment(value: 0, label: Text('支出')),
+                    ButtonSegment(value: 1, label: Text('收入')),
+                  ],
+                  selected: {_typeFilter},
+                  onSelectionChanged: (s) => setState(() {
+                    _typeFilter = s.first;
+                    _categoryFilter = null;
+                  }),
+                ),
+                const Spacer(),
+                DropdownButton<int?>(
+                  value: _categoryFilter,
+                  hint: const Text('全部分类'),
+                  items: [
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('全部分类'),
+                    ),
+                    for (final c in filterableCategories)
+                      DropdownMenuItem<int?>(
+                        value: c.key as int,
+                        child: Text('${c.displayIcon} ${c.name}'),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => _categoryFilter = v),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          // 列表：按日期分组
+          Expanded(
+            child: filtered.isEmpty
+                ? const Center(child: Text('没有符合条件的记录'))
+                : ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 96),
+                    itemCount: _grouped(filtered).length,
+                    itemBuilder: (context, i) {
+                      final (header, items) = _grouped(filtered)[i];
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                            child: Text(
+                              header,
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(color: Colors.grey.shade600),
+                            ),
+                          ),
+                          for (final t in items)
+                            TransactionTile(
+                              transaction: t,
+                              category: t.categoryId == null
+                                  ? null
+                                  : categoryByKey[t.categoryId],
+                              onTap: () =>
+                                  TransactionDetailSheet.show(context, t),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 按日期（倒序）分组：返回 [(表头, 账目列表)]
+  List<(String, List<Transaction>)> _grouped(List<Transaction> list) {
+    final result = <(String, List<Transaction>)>[];
+    String? currentKey;
+    List<Transaction>? currentItems;
+    for (final t in list) {
+      if (t.date != currentKey) {
+        currentKey = t.date;
+        currentItems = [];
+        result.add((
+          DateUtil.listHeader(DateUtil.fromDayKey(t.date)),
+          currentItems,
+        ));
+      }
+      currentItems!.add(t);
+    }
+    return result;
+  }
+}
