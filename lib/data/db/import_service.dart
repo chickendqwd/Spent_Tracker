@@ -37,40 +37,49 @@ class ImportService {
 
   /// 去重键：类型 + 金额 + 币种 + 日期 + 备注 + 分类名。
   /// 不含 createdAt 与 id：同一天同金额同备注同分类的重复导入应被判重。
+  String _keyOf(
+    int type,
+    int amount,
+    String currency,
+    String date,
+    String? note,
+    String? categoryName,
+  ) {
+    return [
+      '$type',
+      '$amount',
+      currency,
+      date,
+      note ?? '',
+      categoryName ?? '',
+    ].join('\u0001');
+  }
+
   String _key(ImportCandidate c) {
     final t = c.transaction;
-    final parts = [
-      '${t.type}',
-      '${t.amount}',
-      t.currency,
-      t.date,
-      t.note ?? '',
-      c.categoryName ?? '',
-    ];
-    return parts.join('\u0001');
+    return _keyOf(t.type, t.amount, t.currency, t.date, t.note, c.categoryName);
   }
 
   Map<String, int> _categoryIndex() => {
         for (final c in Db.categories.values) '${c.type}|${c.name}': c.key as int,
       };
 
-  Set<String> _existingKeys() => {
-        for (final t in Db.transactions.values)
-          _key(
-            ImportCandidate(
-              transaction: t,
-              categoryName: _categoryNameOf(t),
-              rowNumber: 0,
-            ),
-          ),
-      };
-
-  String? _categoryNameOf(Transaction t) {
-    if (t.categoryId == null) return null;
-    for (final c in Db.categories.values) {
-      if (c.key == t.categoryId) return c.name;
-    }
-    return null;
+  /// 现有账目的去重键集合。分类名先建一次 id 表，避免每条账目都全量遍历分类。
+  Set<String> _existingKeys() {
+    final nameById = <int, String>{
+      for (final c in Db.categories.values) c.key as int: c.name,
+    };
+    return {
+      for (final t in Db.transactions.values)
+        _keyOf(
+          t.type,
+          t.amount,
+          t.currency,
+          t.date,
+          t.note,
+          nameById[t.categoryId],
+        ),
+    };
   }
 
   /// 预演：不改动数据，只计算将写入的条目与统计。
