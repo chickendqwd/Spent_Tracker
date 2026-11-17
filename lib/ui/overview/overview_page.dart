@@ -15,6 +15,7 @@ import '../../state/currency_providers.dart';
 import '../../state/recurring_rule_providers.dart';
 import '../../state/summary_providers.dart';
 import '../../state/trend_providers.dart';
+import '../analysis/annual_page.dart';
 import '../widgets/add_transaction_sheet.dart';
 import '../widgets/time_range_selector.dart';
 import '../widgets/transaction_detail_sheet.dart';
@@ -38,7 +39,18 @@ class OverviewPage extends ConsumerWidget {
     final baseSymbol = ref.watch(baseCurrencyProvider).symbol;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('总览')),
+      appBar: AppBar(
+        title: const Text('总览'),
+        actions: [
+          IconButton(
+            tooltip: '年度报告',
+            icon: const Icon(Icons.calendar_view_month_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AnnualPage()),
+            ),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [

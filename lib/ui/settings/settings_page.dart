@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../analysis/annual_page.dart';
 import 'appearance_page.dart';
 import 'budget_settings_page.dart';
 import 'categories_page.dart';
@@ -58,6 +59,19 @@ class SettingsPage extends StatelessWidget {
             subtitle: '每周 / 每月 / 每年待记提醒',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const RecurringRulesPage()),
+            ),
+          ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text('分析', style: textTheme.labelLarge),
+          ),
+          _EntryTile(
+            icon: Icons.insights_outlined,
+            title: '年度报告',
+            subtitle: '全年收支、月度柱状图与分类排行',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AnnualPage()),
             ),
           ),
           const Divider(),
