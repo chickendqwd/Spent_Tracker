@@ -1,0 +1,67 @@
+name: Build iOS IPA (unsigned)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-ipa:
+    name: Build unsigned IPA
+    runs-on: macos-14
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build iOS (no codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -r -y SpentTracker-unsigned.ipa Payload
+          ls -lh SpentTracker-unsigned.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpentTracker-unsigned-ipa
+          path: SpentTracker-unsigned.ipa
+          retention-days: 90
+
+      - name: Attach IPA to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: SpentTracker-unsigned.ipa
+          body: |
+            ## iOS 安装说明（未签名 IPA）
+
+            本包为**未签名 IPA**，需在 iPhone 上用 iLoader / SideStore 以你的 Apple ID 签名安装。
+
+            1. 下载 `SpentTracker-unsigned.ipa`
+            2. 用 iLoader 生成配对文件（Pairing File），并导入 SideStore
+            3. 在 SideStore / iLoader 中导入本 IPA，填写 Bundle ID `com.spenttracker.spentTracker` 后签名安装
+            4. 免费 Apple ID 签名有效期 7 天，请保持 SideStore 的自动刷新开启
+
+            注意：免费账号同一时间最多签名 3 个 App；每次重签后本地数据仍保留（Hive 数据随 App 沙盒保留，重装会清空）。

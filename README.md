@@ -61,6 +61,18 @@ flutter run -d windows        # 桌面
 flutter run -d <device-id>    # Android / iOS 设备
 ```
 
+### iOS 安装（iLoader + SideStore）
+
+Windows 上无法本地构建 iOS 包，仓库内置 GitHub Actions 流水线，在 macOS 机器上产出**未签名 IPA**，签名由 iPhone 端的 iLoader / SideStore 完成：
+
+1. 推送标签（`git push origin --tags`）会自动触发 `.github/workflows/ios-ipa.yml`；也可在 Actions 页手动 `Run workflow`
+2. 构建完成后，在 Actions 的产物（artifact）或 Release 附件里下载 `SpentTracker-unsigned.ipa`
+3. 用 iLoader 生成 Pairing File 并导入 SideStore
+4. 在 SideStore / iLoader 中导入该 IPA，Bundle ID 填 `com.spenttracker.spentTracker`，用自己的 Apple ID 签名安装
+5. 免费 Apple ID 的签名 7 天有效，请开启 SideStore 的自动刷新；免费账号同时最多签名 3 个 App
+
+注意：重装（卸载后安装）会清空本地 Hive 数据，升级覆盖安装则保留。
+
 修改 Hive 模型后需重新生成适配器：
 
 ```bash
