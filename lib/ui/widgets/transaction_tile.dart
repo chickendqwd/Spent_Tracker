@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
 import '../../core/utils/money_util.dart';
 import '../../data/models/category.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/transaction_type.dart';
+import '../../state/currency_providers.dart';
 
 /// 单条账目展示（总览「最近记录」与「明细」列表共用）。
-class TransactionTile extends StatelessWidget {
+class TransactionTile extends ConsumerWidget {
   const TransactionTile({
     super.key,
     required this.transaction,
@@ -23,7 +25,7 @@ class TransactionTile extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isExpense = transaction.transactionType == TransactionType.expense;
     final prefix = isExpense
         ? AppConstants.expensePrefix
@@ -31,6 +33,13 @@ class TransactionTile extends StatelessWidget {
     final color = isExpense
         ? AppConstants.expenseColor
         : AppConstants.incomeColor;
+    // 列表/详情显示原记账币种符号（agent v2 4.8）
+    final symbol = ref
+            .watch(currencyProvider)
+            .where((c) => c.code == transaction.currency)
+            .firstOrNull
+            ?.symbol ??
+        'S\$';
 
     return ListTile(
       onTap: onTap,
@@ -50,7 +59,7 @@ class TransactionTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
       trailing: Text(
-        '$prefix${MoneyUtil.format(transaction.amount)}',
+        '$prefix${MoneyUtil.format(transaction.amount, symbol: symbol)}',
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.w600,

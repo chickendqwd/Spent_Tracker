@@ -4,7 +4,10 @@ import 'package:flutter/foundation.dart' hide Category;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../models/budget.dart';
 import '../models/category.dart';
+import '../models/currency.dart';
+import '../models/recurring_rule.dart';
 import '../models/transaction.dart';
 
 /// Hive 盒子访问入口。initDatabase 完成前不可使用。
@@ -13,6 +16,25 @@ class Db {
 
   static late Box<Category> categories;
   static late Box<Transaction> transactions;
+
+  /// 预算盒（auto-increment int key）
+  static late Box<Budget> budgets;
+
+  /// 周期记账规则盒（auto-increment int key）
+  static late Box<RecurringRule> recurringRules;
+
+  /// 币种与汇率盒（key 为币种 code，如 'SGD' / 'CNY' / 'MYR'）
+  static late Box<Currency> currencies;
+}
+
+/// 默认汇率（基准 SGD；SGD 自身 rate=1）。这些是手动默认值，可在「设置→货币与汇率」修改或联网更新。
+class PresetCurrencies {
+  static const List<({String code, String name, String symbol, double rate})>
+      data = [
+    (code: 'SGD', name: '新加坡元', symbol: 'S\$', rate: 1.0),
+    (code: 'CNY', name: '人民币', symbol: '¥', rate: 0.186),
+    (code: 'MYR', name: '马来西亚林吉特', symbol: 'RM', rate: 0.30),
+  ];
 }
 
 /// 预设分类（首启写入，isPreset=true 禁止删除）。
@@ -64,10 +86,17 @@ Future<void> _openBoxesAndSeed() async {
     _adaptersRegistered = true;
     Hive.registerAdapter(CategoryAdapter());
     Hive.registerAdapter(TransactionAdapter());
+    Hive.registerAdapter(BudgetAdapter());
+    Hive.registerAdapter(RecurringRuleAdapter());
+    Hive.registerAdapter(CurrencyAdapter());
   }
   Db.categories = await Hive.openBox<Category>('categories');
   Db.transactions = await Hive.openBox<Transaction>('transactions');
+  Db.budgets = await Hive.openBox<Budget>('budgets');
+  Db.recurringRules = await Hive.openBox<RecurringRule>('recurring_rules');
+  Db.currencies = await Hive.openBox<Currency>('currencies');
   await _seedPresetCategoriesIfNeeded();
+  await _seedPresetCurrenciesIfNeeded();
 }
 
 Future<void> _seedPresetCategoriesIfNeeded() async {
@@ -79,6 +108,23 @@ Future<void> _seedPresetCategoriesIfNeeded() async {
         type: item.type,
         icon: item.icon,
         isPreset: true,
+      ),
+    );
+  }
+}
+
+/// 首启写入默认币种与汇率（用 code 作 key，幂等）。
+Future<void> _seedPresetCurrenciesIfNeeded() async {
+  for (final item in PresetCurrencies.data) {
+    if (Db.currencies.containsKey(item.code)) continue;
+    await Db.currencies.put(
+      item.code,
+      Currency(
+        code: item.code,
+        name: item.name,
+        symbol: item.symbol,
+        rateToSgd: item.rate,
+        isBase: item.code == 'SGD',
       ),
     );
   }

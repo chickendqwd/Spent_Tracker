@@ -2,28 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants.dart';
 import '../../core/utils/date_util.dart';
 import '../../core/utils/money_util.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/transaction_type.dart';
+import '../../state/budget_providers.dart';
 import '../../state/category_providers.dart';
+import '../../state/currency_providers.dart';
 import '../../state/transaction_providers.dart';
 
 /// 「记一笔 / 编辑账目」弹出面板（悬浮「+」入口）。
 /// 录入闭环 ≤3 步：填金额 → 选分类 → 保存（默认今天、金额键盘优先）。
+/// v2：支持币种选择与周期记账「今日待记」预填；保存时若将超支预算给出轻提示（不强制）。
 class AddTransactionSheet extends ConsumerStatefulWidget {
-  const AddTransactionSheet({super.key, this.existing});
+  const AddTransactionSheet({super.key, this.existing, this.prefill});
 
   /// 传入则为编辑模式，否则为新增。
   final Transaction? existing;
 
-  static Future<void> show(BuildContext context, {Transaction? existing}) {
+  /// 新增模式的预填值（如周期记账「今日待记」），编辑模式忽略。
+  final Transaction? prefill;
+
+  static Future<void> show(
+    BuildContext context, {
+    Transaction? existing,
+    Transaction? prefill,
+  }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => AddTransactionSheet(existing: existing),
+      builder: (_) => AddTransactionSheet(existing: existing, prefill: prefill),
     );
   }
 
@@ -51,6 +60,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   late final TextEditingController _noteController;
   late int? _categoryId;
   late DateTime _date;
+  late String _currency;
   String? _amountError;
   bool _showCategoryError = false;
 
@@ -60,15 +70,19 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   void initState() {
     super.initState();
     final existing = widget.existing;
-    _type = existing?.transactionType ?? TransactionType.expense;
+    final prefill = widget.prefill;
+    final seed = existing ?? prefill;
+    _type = seed?.transactionType ?? TransactionType.expense;
     _amountController = TextEditingController(
-      text: existing == null ? '' : MoneyUtil.inputText(existing.amount),
+      text: seed == null ? '' : MoneyUtil.inputText(seed.amount),
     );
-    _noteController = TextEditingController(text: existing?.note ?? '');
-    _categoryId = existing?.categoryId;
-    _date = existing == null
+    _noteController = TextEditingController(text: seed?.note ?? '');
+    _categoryId = seed?.categoryId;
+    _date = seed == null
         ? DateTime.now()
-        : DateUtil.fromDayKey(existing.date);
+        : DateUtil.fromDayKey(seed.date);
+    // 币种：编辑/预填沿用其币种；新增默认基准币种（SGD）
+    _currency = seed?.currency ?? 'SGD';
   }
 
   @override
@@ -86,6 +100,30 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       final list = ref.read(categoryProvider.notifier).ofType(type.index);
       _categoryId = list.isEmpty ? null : list.first.key as int;
     });
+  }
+
+  /// 保存后将超出预算的轻提示文本；无则 null。读取保存前状态判断「将超出」。
+  String? _overBudgetWarning(int cents) {
+    final currencies = ref.read(currencyProvider);
+    final sgdCents = toBaseCents(currencies, cents, _currency);
+    final catBudgets = ref.read(categoryBudgetProvider);
+    final totalBudget = ref.read(totalBudgetProvider);
+    final byCat = ref.read(thisMonthExpenseByCategoryProvider);
+    final monthExpense = ref.read(thisMonthExpenseProvider);
+
+    if (_categoryId != null) {
+      final budget = catBudgets[_categoryId];
+      if (budget != null) {
+        final used = byCat[_categoryId] ?? 0;
+        if (used + sgdCents > budget.amount) {
+          return '本月该分类将超出预算（${MoneyUtil.format(budget.amount, symbol: 'S\$ ')}）';
+        }
+      }
+    }
+    if (totalBudget != null && monthExpense + sgdCents > totalBudget.amount) {
+      return '本月总支出将超出预算（${MoneyUtil.format(totalBudget.amount, symbol: 'S\$ ')}）';
+    }
+    return null;
   }
 
   Future<void> _save() async {
@@ -109,6 +147,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     }
 
     final note = _noteController.text.trim();
+    final messenger = ScaffoldMessenger.of(context);
+    final warning = _overBudgetWarning(cents);
+
     if (_isEdit) {
       // 编辑需二次确认（已确认规则）
       final confirmed = await showDialog<bool>(
@@ -135,6 +176,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       t.categoryId = categoryId;
       t.date = DateUtil.toDayKey(_date);
       t.note = note.isEmpty ? null : note;
+      t.currency = _currency;
       await ref.read(transactionProvider.notifier).update(t);
     } else {
       await ref
@@ -146,16 +188,27 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               categoryId: categoryId,
               date: DateUtil.toDayKey(_date),
               note: note.isEmpty ? null : note,
+              currency: _currency,
               createdAt: DateTime.now(),
             ),
           );
     }
     if (mounted) Navigator.of(context).pop();
+    // 超支轻提示（不强制）：关闭面板后在根 Scaffold 上提示
+    if (warning != null) {
+      messenger.showSnackBar(SnackBar(content: Text(warning)));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoryProvider);
+    final currencies = ref.watch(currencyProvider);
+    final currencySymbol = currencies
+        .where((c) => c.code == _currency)
+        .firstOrNull
+        ?.symbol ??
+        'S\$';
     final typeCategories = categories
         .where((c) => c.type == _type.index)
         .toList(growable: false);
@@ -222,10 +275,29 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                     ),
                     decoration: InputDecoration(
                       labelText: '金额',
-                      prefixText: AppConstants.currencySymbol,
+                      prefixText: currencySymbol,
                       errorText: _amountError,
                       border: const OutlineInputBorder(),
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  // 币种（v2）：默认基准 SGD，可切换
+                  DropdownButtonFormField<String>(
+                    initialValue: _currency,
+                    decoration: const InputDecoration(
+                      labelText: '币种',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    items: [
+                      for (final c in currencies)
+                        DropdownMenuItem(
+                          value: c.code,
+                          child: Text('${c.symbol} ${c.name}'),
+                        ),
+                    ],
+                    onChanged: (v) =>
+                        setState(() => _currency = v ?? 'SGD'),
                   ),
                   const SizedBox(height: 20),
                   // 第 2 步：分类（默认选中第一个）

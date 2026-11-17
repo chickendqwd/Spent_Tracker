@@ -14,7 +14,9 @@ class Transaction extends HiveObject {
     required this.date,
     this.note,
     required this.createdAt,
-  });
+    String currency = 'SGD',
+    // ignore: prefer_initializing_formals
+  }) : _currency = currency;
 
   /// 0=支出，1=收入（对应 TransactionType.index）
   @HiveField(0)
@@ -39,6 +41,16 @@ class Transaction extends HiveObject {
   /// 创建时间戳
   @HiveField(5)
   DateTime createdAt;
+
+  /// 币种代码（v2 新增）。内部可空存储：v1 旧记录无此字段，读取时回退 SGD，
+  /// 避免 hive adapter 对缺失字段赋空导致崩溃。
+  @HiveField(6)
+  String? _currency;
+
+  /// 币种代码，默认 SGD（基准币种）。
+  String get currency => _currency ?? 'SGD';
+
+  set currency(String value) => _currency = value;
 
   TransactionType get transactionType => TransactionType.fromIndex(type);
 }

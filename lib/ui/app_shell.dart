@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'overview/overview_page.dart';
-import 'settings/categories_page.dart';
+import 'settings/settings_page.dart';
 import 'transactions/transaction_list_page.dart';
 import 'widgets/add_transaction_sheet.dart';
 
@@ -19,7 +19,7 @@ class _AppShellState extends State<AppShell> {
   static const _pages = <Widget>[
     OverviewPage(),
     TransactionListPage(),
-    CategoriesPage(),
+    SettingsPage(),
   ];
 
   @override

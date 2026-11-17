@@ -7,6 +7,7 @@ import '../../core/utils/money_util.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/transaction_type.dart';
 import '../../state/category_providers.dart';
+import '../../state/currency_providers.dart';
 import '../../state/transaction_providers.dart';
 import 'add_transaction_sheet.dart';
 
@@ -33,13 +34,19 @@ class TransactionDetailSheet extends ConsumerWidget {
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final t = transaction;
+    final symbol = ref
+            .read(currencyProvider)
+            .where((c) => c.code == t.currency)
+            .firstOrNull
+            ?.symbol ??
+        'S\$';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除这笔记录？'),
         content: Text(
           '${t.transactionType == TransactionType.expense ? '支出' : '收入'} '
-          '${MoneyUtil.format(t.amount)}，删除后不可恢复。',
+          '${MoneyUtil.format(t.amount, symbol: symbol)}，删除后不可恢复。',
         ),
         actions: [
           TextButton(
@@ -67,6 +74,12 @@ class TransactionDetailSheet extends ConsumerWidget {
     final category = transaction.categoryId == null
         ? null
         : categories.where((c) => c.key == transaction.categoryId).firstOrNull;
+    final symbol = ref
+            .watch(currencyProvider)
+            .where((c) => c.code == transaction.currency)
+            .firstOrNull
+            ?.symbol ??
+        'S\$';
     final isExpense = transaction.transactionType == TransactionType.expense;
     final color = isExpense
         ? AppConstants.expenseColor
@@ -77,7 +90,8 @@ class TransactionDetailSheet extends ConsumerWidget {
 
     final rows = <(String, String)>[
       ('类型', transaction.transactionType.label),
-      ('金额', MoneyUtil.format(transaction.amount)),
+      ('金额', MoneyUtil.format(transaction.amount, symbol: symbol)),
+      ('币种', transaction.currency),
       ('分类', category?.name ?? '未分类'),
       ('日期', DateUtil.listHeader(DateUtil.fromDayKey(transaction.date))),
       if (transaction.note != null && transaction.note!.isNotEmpty)
@@ -113,7 +127,7 @@ class TransactionDetailSheet extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  '$prefix${MoneyUtil.format(transaction.amount)}',
+                  '$prefix${MoneyUtil.format(transaction.amount, symbol: symbol)}',
                   style: TextStyle(
                     color: color,
                     fontSize: 26,

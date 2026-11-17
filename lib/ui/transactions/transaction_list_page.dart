@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/date_util.dart';
+import '../../core/utils/money_util.dart';
 import '../../data/models/transaction.dart';
 import '../../state/category_providers.dart';
 import '../../state/transaction_providers.dart';
+import '../../state/time_range_providers.dart';
 import '../widgets/transaction_detail_sheet.dart';
 import '../widgets/transaction_tile.dart';
+import '../widgets/time_range_selector.dart';
 
-/// 交易列表页：时间倒序、类型/分类筛选、点击查看/编辑/删除。
+/// 交易列表页：时间倒序、类型/分类筛选、时间范围切换、搜索、点击查看/编辑/删除。
 class TransactionListPage extends ConsumerStatefulWidget {
   const TransactionListPage({super.key});
 
@@ -24,10 +27,26 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
   /// null=全部分类
   int? _categoryFilter;
 
+  late final TextEditingController _searchController;
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final transactions = ref.watch(transactionProvider);
     final categories = ref.watch(categoryProvider);
+    final range = ref.watch(dateRangeProvider);
     final categoryByKey = {for (final c in categories) c.key as int: c};
 
     // 分类筛选下拉的候选项：跟随类型筛选
@@ -42,11 +61,26 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
       });
     }
 
+    final query = _query.trim();
+    final queryCents = MoneyUtil.parseToCents(query);
     final filtered = transactions
         .where((t) {
+          if (!range.containsKey(t.date)) return false;
           if (_typeFilter != null && t.type != _typeFilter) return false;
           if (_categoryFilter != null && t.categoryId != _categoryFilter) {
             return false;
+          }
+          if (query.isNotEmpty) {
+            final catName = t.categoryId == null
+                ? '未分类'
+                : (categoryByKey[t.categoryId]?.name ?? '');
+            final note = t.note ?? '';
+            final amountMatch = queryCents != null && t.amount == queryCents;
+            if (!amountMatch &&
+                !catName.contains(query) &&
+                !note.contains(query)) {
+              return false;
+            }
           }
           return true;
         })
@@ -56,6 +90,32 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
       appBar: AppBar(title: const Text('交易明细')),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: '搜索备注、分类或金额',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _query.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _query = '');
+                        },
+                      ),
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+              onChanged: (v) => setState(() => _query = v),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: const TimeRangeSelector(),
+          ),
           // 筛选栏：类型 + 分类
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -102,7 +162,7 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
           // 列表：按日期分组
           Expanded(
             child: filtered.isEmpty
-                ? const Center(child: Text('没有符合条件的记录'))
+                ? const Center(child: Text('没有找到匹配的账目'))
                 : ListView.builder(
                     padding: const EdgeInsets.only(bottom: 96),
                     itemCount: _grouped(filtered).length,

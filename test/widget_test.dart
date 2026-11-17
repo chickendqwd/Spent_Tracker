@@ -38,15 +38,16 @@ void main() {
   testWidgets('首启：总览页渲染三卡片、空态与预设分类', (tester) async {
     await pumpApp(tester);
 
-    expect(find.textContaining('本月总览'), findsOneWidget);
+    expect(find.text('总览'), findsWidgets);
     expect(find.text('总支出'), findsOneWidget);
     expect(find.text('总收入'), findsOneWidget);
     expect(find.text('结余'), findsOneWidget);
-    expect(find.text('本月暂无支出'), findsOneWidget);
-    expect(find.text('还没有记录，点右下角「+」记一笔吧'), findsOneWidget);
+    expect(find.text('区间内暂无支出'), findsOneWidget);
+    expect(find.text('区间内还没有记录，点右下角「+」记一笔吧'), findsOneWidget);
 
-    // 预设分类已写入数据库
+    // 预设分类与预设币种已写入数据库
     expect(Db.categories.length, 13);
+    expect(Db.currencies.length, 3);
   });
 
   testWidgets('录入闭环：记一笔支出后总览与明细同步更新', (tester) async {
@@ -70,9 +71,9 @@ void main() {
     });
     await tester.pumpAndSettle();
 
-    // 面板关闭，总览出现该笔支出
+    // 面板关闭，总览出现该笔支出（默认币种 SGD，符号 S$）
     expect(find.text('记一笔'), findsNothing); // 录入面板已关闭
-    expect(find.text('¥25.50'), findsWidgets);
+    expect(find.text('S\$25.50'), findsWidgets);
     // 数据库落盘
     expect(Db.transactions.length, 1);
     final saved = Db.transactions.getAt(0)!;
@@ -80,13 +81,14 @@ void main() {
     expect(saved.type, 0);
     expect(saved.categoryId, isNotNull);
     expect(saved.note, isNull);
+    expect(saved.currency, 'SGD');
 
     // 明细页可见该记录
     await tester.tap(find.text('明细'));
     await tester.pumpAndSettle();
     expect(find.text('交易明细'), findsOneWidget);
     expect(find.text('餐饮'), findsWidgets);
-    expect(find.text('-¥25.50'), findsOneWidget);
+    expect(find.text('-S\$25.50'), findsOneWidget);
   });
 
   testWidgets('编辑账目需二次确认', (tester) async {
@@ -137,8 +139,10 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
 
-    // 进入设置页：自定义分类有删除按钮，预设分类没有
+    // 进入设置 → 分类管理：自定义分类有删除按钮，预设分类没有
     await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('分类管理'));
     await tester.pumpAndSettle();
     expect(find.byTooltip('删除'), findsOneWidget); // 仅自定义分类「宠物」可删
 
@@ -207,11 +211,64 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('¥35.50'), findsOneWidget); // 总支出 25.50+10.00
-    expect(find.text('¥100.00'), findsOneWidget); // 总收入
-    expect(find.text('¥64.50'), findsOneWidget); // 结余
+    expect(find.text('S\$35.50'), findsOneWidget); // 总支出 25.50+10.00
+    expect(find.text('S\$100.00'), findsOneWidget); // 总收入
+    expect(find.text('S\$64.50'), findsOneWidget); // 结余
     // 分类占比图例
     expect(find.text('餐饮'), findsWidgets);
+    expect(find.text('交通'), findsWidgets);
+  });
+
+  testWidgets('搜索：按备注关键词过滤交易明细', (tester) async {
+    await pumpApp(tester);
+
+    // 预置：餐饮(备注 午餐) + 交通(备注 地铁)，均为本月
+    final expenseCat = Db.categories.values.firstWhere((c) => c.name == '餐饮');
+    final trafficCat = Db.categories.values.firstWhere((c) => c.name == '交通');
+    final now = DateTime.now();
+    final today =
+        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    await tester.runAsync(() async {
+      await Db.transactions.add(
+        Transaction(
+          type: 0,
+          amount: 1000,
+          categoryId: expenseCat.key as int,
+          date: today,
+          note: '午餐',
+          createdAt: DateTime.now(),
+        ),
+      );
+      await Db.transactions.add(
+        Transaction(
+          type: 0,
+          amount: 500,
+          categoryId: trafficCat.key as int,
+          date: today,
+          note: '地铁',
+          createdAt: DateTime.now().add(const Duration(seconds: 1)),
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+
+    await tester.pumpAndSettle();
+
+    // 进入明细页，两条都可见
+    await tester.tap(find.text('明细'));
+    await tester.pumpAndSettle();
+    expect(find.text('餐饮'), findsWidgets);
+    expect(find.text('交通'), findsWidgets);
+
+    // 按备注搜索「午餐」→ 只保留餐饮
+    await tester.enterText(find.byType(TextField).first, '午餐');
+    await tester.pumpAndSettle();
+    expect(find.text('餐饮'), findsWidgets);
+    expect(find.text('交通'), findsNothing);
+
+    // 清空 → 两条恢复
+    await tester.enterText(find.byType(TextField).first, '');
+    await tester.pumpAndSettle();
     expect(find.text('交通'), findsWidgets);
   });
 }
