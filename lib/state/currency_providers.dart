@@ -52,6 +52,14 @@ double rateOf(List<Currency> currencies, String code) {
   return 1.0;
 }
 
+/// 某币种的展示符号；币种缺失时回退到基准币种符号 SGD。
+String symbolOf(List<Currency> currencies, String code) {
+  for (final c in currencies) {
+    if (c.code == code) return c.symbol;
+  }
+  return 'S\$';
+}
+
 /// 把「某币种金额（分）」换算为「基准币种金额（分）」，四舍五入。
 /// 币种缺失或为基准币种时原样返回。
 int toBaseCents(List<Currency> currencies, int amount, String currencyCode) {

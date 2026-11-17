@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../data/models/category.dart';
 import '../../data/models/transaction_type.dart';
 import '../../state/category_providers.dart';
@@ -223,7 +224,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
         children: [
           Text(
             '所属类型：${TransactionType.fromIndex(widget.type).label}',
-            style: textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+            style: textTheme.bodySmall?.copyWith(color: context.palette.muted),
           ),
           const SizedBox(height: 12),
           TextField(

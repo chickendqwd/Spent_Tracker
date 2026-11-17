@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_util.dart';
 import '../../core/utils/money_util.dart';
 import '../../data/models/transaction.dart';
@@ -34,12 +35,7 @@ class TransactionDetailSheet extends ConsumerWidget {
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final t = transaction;
-    final symbol = ref
-            .read(currencyProvider)
-            .where((c) => c.code == t.currency)
-            .firstOrNull
-            ?.symbol ??
-        'S\$';
+    final symbol = symbolOf(ref.read(currencyProvider), t.currency);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -74,16 +70,12 @@ class TransactionDetailSheet extends ConsumerWidget {
     final category = transaction.categoryId == null
         ? null
         : categories.where((c) => c.key == transaction.categoryId).firstOrNull;
-    final symbol = ref
-            .watch(currencyProvider)
-            .where((c) => c.code == transaction.currency)
-            .firstOrNull
-            ?.symbol ??
-        'S\$';
+    final symbol =
+        symbolOf(ref.watch(currencyProvider), transaction.currency);
     final isExpense = transaction.transactionType == TransactionType.expense;
     final color = isExpense
-        ? AppConstants.expenseColor
-        : AppConstants.incomeColor;
+        ? context.palette.expense
+        : context.palette.income;
     final prefix = isExpense
         ? AppConstants.expensePrefix
         : AppConstants.incomePrefix;
@@ -148,7 +140,7 @@ class TransactionDetailSheet extends ConsumerWidget {
                     width: 64,
                     child: Text(
                       label,
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: TextStyle(color: context.palette.muted),
                     ),
                   ),
                   Expanded(child: Text(value)),

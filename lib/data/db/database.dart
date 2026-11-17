@@ -25,6 +25,9 @@ class Db {
 
   /// 币种与汇率盒（key 为币种 code，如 'SGD' / 'CNY' / 'MYR'）
   static late Box<Currency> currencies;
+
+  /// 轻量偏好设置盒（外观模式等非业务配置）
+  static late Box<dynamic> settings;
 }
 
 /// 默认汇率（基准 SGD；SGD 自身 rate=1）。这些是手动默认值，可在「设置→货币与汇率」修改或联网更新。
@@ -95,6 +98,7 @@ Future<void> _openBoxesAndSeed() async {
   Db.budgets = await Hive.openBox<Budget>('budgets');
   Db.recurringRules = await Hive.openBox<RecurringRule>('recurring_rules');
   Db.currencies = await Hive.openBox<Currency>('currencies');
+  Db.settings = await Hive.openBox('settings');
   await _seedPresetCategoriesIfNeeded();
   await _seedPresetCurrenciesIfNeeded();
 }

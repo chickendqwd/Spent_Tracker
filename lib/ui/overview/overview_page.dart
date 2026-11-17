@@ -4,7 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_util.dart';
 import '../../core/utils/money_util.dart';
 import '../../data/models/recurring_rule.dart';
@@ -54,14 +54,14 @@ class OverviewPage extends ConsumerWidget {
               _StatCard(
                 label: '总支出',
                 amount: summary.totalExpense,
-                color: AppConstants.expenseColor,
+                color: context.palette.expense,
                 symbol: baseSymbol,
               ),
               const SizedBox(width: 10),
               _StatCard(
                 label: '总收入',
                 amount: summary.totalIncome,
-                color: AppConstants.incomeColor,
+                color: context.palette.income,
                 symbol: baseSymbol,
               ),
               const SizedBox(width: 10),
@@ -196,7 +196,7 @@ class _StatCard extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                style: textTheme.bodySmall?.copyWith(color: context.palette.muted),
               ),
               const SizedBox(height: 6),
               FittedBox(
@@ -233,7 +233,7 @@ class _BudgetCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final over = used > budgetAmount;
     final progress = budgetAmount <= 0 ? 0.0 : (used / budgetAmount).clamp(0.0, 1.0);
-    final color = over ? AppConstants.expenseColor : Theme.of(context).colorScheme.primary;
+    final color = over ? context.palette.expense : Theme.of(context).colorScheme.primary;
 
     return Card(
       child: Padding(
@@ -268,7 +268,7 @@ class _BudgetCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 '已超出预算',
-                style: TextStyle(color: AppConstants.expenseColor, fontSize: 12),
+                style: TextStyle(color: context.palette.expense, fontSize: 12),
               ),
             ],
           ],
@@ -341,7 +341,7 @@ class _TrendCard extends ConsumerWidget {
                         interval: _niceInterval(trend),
                         getTitlesWidget: (v, meta) => Text(
                           (v / 100).toStringAsFixed(0),
-                          style: const TextStyle(fontSize: 10, color: Colors.grey),
+                          style: TextStyle(fontSize: 10, color: context.palette.muted),
                         ),
                       ),
                     ),
@@ -355,7 +355,7 @@ class _TrendCard extends ConsumerWidget {
                           final m = trend[i].month;
                           return Text(
                             '${int.parse(m.substring(5))}月',
-                            style: const TextStyle(fontSize: 10, color: Colors.grey),
+                            style: TextStyle(fontSize: 10, color: context.palette.muted),
                           );
                         },
                       ),
@@ -367,7 +367,7 @@ class _TrendCard extends ConsumerWidget {
                         for (final s in spots)
                           LineTooltipItem(
                             '${s.y / 100} $symbol',
-                            const TextStyle(color: Colors.white),
+                            TextStyle(color: context.palette.onChartLabel),
                           ),
                       ],
                     ),
@@ -375,19 +375,19 @@ class _TrendCard extends ConsumerWidget {
                   lineBarsData: [
                     _line(
                       trend.map((p) => p.expense).toList(),
-                      AppConstants.expenseColor,
+                      context.palette.expense,
                     ),
                     _line(
                       trend.map((p) => p.income).toList(),
-                      AppConstants.incomeColor,
+                      context.palette.income,
                     ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 8),
-            _legendDot('支出', AppConstants.expenseColor),
-            _legendDot('收入', AppConstants.incomeColor),
+            _legendDot('支出', context.palette.expense),
+            _legendDot('收入', context.palette.income),
           ],
         ),
       ),
@@ -532,15 +532,15 @@ class _CategoryAnalysisCardState extends ConsumerState<_CategoryAnalysisCard> {
                             for (final (i, share) in shares.indexed)
                               PieChartSectionData(
                                 value: share.amountCents.toDouble(),
-                                color: AppConstants.chartPalette[
-                                    i % AppConstants.chartPalette.length],
+                                color: context.palette.chartPalette[
+                                    i % context.palette.chartPalette.length],
                                 radius: 50,
                                 title:
                                     '${(share.amountCents / total * 100).toStringAsFixed(0)}%',
-                                titleStyle: const TextStyle(
+                                titleStyle: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.white,
+                                  color: context.palette.onChartLabel,
                                 ),
                               ),
                           ],
@@ -562,8 +562,8 @@ class _CategoryAnalysisCardState extends ConsumerState<_CategoryAnalysisCard> {
                                     width: 10,
                                     height: 10,
                                     decoration: BoxDecoration(
-                                      color: AppConstants.chartPalette[
-                                          i % AppConstants.chartPalette.length],
+                                      color: context.palette.chartPalette[
+                                          i % context.palette.chartPalette.length],
                                       shape: BoxShape.circle,
                                     ),
                                   ),

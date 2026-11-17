@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_util.dart';
 import '../../core/utils/money_util.dart';
 import '../../data/models/category.dart';
@@ -115,8 +116,8 @@ class _RuleTile extends ConsumerWidget {
                     '$prefix${MoneyUtil.format(rule.amount, symbol: symbol)}',
                     style: TextStyle(
                       color: isExpense
-                          ? Theme.of(context).colorScheme.error
-                          : const Color(0xFF2F8C6B),
+                          ? context.palette.expense
+                          : context.palette.income,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -125,7 +126,7 @@ class _RuleTile extends ConsumerWidget {
                   rule.active ? '启用中' : '已停用',
                   style: TextStyle(
                     color: rule.active
-                        ? Colors.grey.shade600
+                        ? context.palette.muted
                         : Theme.of(context).colorScheme.outline,
                     fontSize: 12,
                   ),
@@ -145,7 +146,7 @@ class _RuleTile extends ConsumerWidget {
             Text(
               '$desc · 开始 ${rule.startDate}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey.shade600,
+                    color: context.palette.muted,
                   ),
             ),
             Row(
@@ -357,7 +358,7 @@ class _RuleDialogState extends State<_RuleDialog> {
               decoration: InputDecoration(
                 labelText: '金额',
                 prefixText:
-                    '${widget.currencies.where((c) => c.code == _currency).firstOrNull?.symbol ?? 'S\$'} ',
+                    '${symbolOf(widget.currencies, _currency)} ',
                 border: const OutlineInputBorder(),
               ),
             ),

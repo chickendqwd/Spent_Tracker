@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'appearance_page.dart';
 import 'budget_settings_page.dart';
 import 'categories_page.dart';
 import 'currency_page.dart';
@@ -18,6 +19,19 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text('通用', style: textTheme.labelLarge),
+          ),
+          _EntryTile(
+            icon: Icons.palette_outlined,
+            title: '外观',
+            subtitle: '跟随系统 / 浅色 / 深色',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AppearancePage()),
+            ),
+          ),
+          const Divider(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Text('记账管理', style: textTheme.labelLarge),

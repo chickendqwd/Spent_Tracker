@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../data/models/currency.dart';
 import '../../state/currency_providers.dart';
 
@@ -111,7 +112,7 @@ class _CurrencyTile extends ConsumerWidget {
               : '1 ${currency.code} = ${currency.rateToSgd.toStringAsFixed(4)} SGD',
         ),
         trailing: isBase
-            ? const Icon(Icons.star, color: Color(0xFFE5A13E))
+            ? Icon(Icons.star, color: context.palette.accent)
             : IconButton(
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: '修改汇率',

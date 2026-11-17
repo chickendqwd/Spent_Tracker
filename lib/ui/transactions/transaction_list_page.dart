@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_util.dart';
 import '../../core/utils/money_util.dart';
 import '../../data/models/transaction.dart';
@@ -176,7 +177,7 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
                             child: Text(
                               header,
                               style: Theme.of(context).textTheme.labelMedium
-                                  ?.copyWith(color: Colors.grey.shade600),
+                                  ?.copyWith(color: context.palette.muted),
                             ),
                           ),
                           for (final t in items)

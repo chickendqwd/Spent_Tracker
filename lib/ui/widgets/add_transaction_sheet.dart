@@ -204,11 +204,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   Widget build(BuildContext context) {
     final categories = ref.watch(categoryProvider);
     final currencies = ref.watch(currencyProvider);
-    final currencySymbol = currencies
-        .where((c) => c.code == _currency)
-        .firstOrNull
-        ?.symbol ??
-        'S\$';
+    final currencySymbol = symbolOf(currencies, _currency);
     final typeCategories = categories
         .where((c) => c.type == _type.index)
         .toList(growable: false);

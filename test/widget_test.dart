@@ -6,11 +6,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
 import 'package:spent_tracker/app.dart';
+import 'package:spent_tracker/core/theme/app_theme.dart';
+import 'package:spent_tracker/core/utils/date_util.dart';
 import 'package:spent_tracker/data/db/database.dart';
 import 'package:spent_tracker/data/models/category.dart';
 import 'package:spent_tracker/data/models/transaction.dart';
+import 'package:spent_tracker/state/theme_providers.dart';
 
 void main() {
+  // 普通 test 与 testWidgets 混跑，确保 binding 在两者中都可用的 Hive close
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late Directory tempDir;
 
   setUp(() async {
@@ -101,7 +107,8 @@ void main() {
           type: 0,
           amount: 1000,
           categoryId: Db.categories.getAt(0)?.key as int?,
-          date: '2026-10-20',
+          // 用「今天」而非固定日期：默认区间是本月，硬编码日期会跨月失效
+          date: DateUtil.toDayKey(DateTime.now()),
           createdAt: DateTime.now(),
         ),
       );
@@ -270,5 +277,49 @@ void main() {
     await tester.enterText(find.byType(TextField).first, '');
     await tester.pumpAndSettle();
     expect(find.text('交通'), findsWidgets);
+  });
+
+  testWidgets('外观：切换深色后主题与配色生效并持久化', (tester) async {
+    await pumpApp(tester);
+
+    // 设置 → 外观
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('外观'));
+    await tester.pumpAndSettle();
+
+    // 切换到深色（点击会触发 Hive 写入，须在真实 zone 中执行，否则 FakeAsync 下挂起）
+    await tester.runAsync(() async {
+      await tester.tap(find.text('深色'));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    });
+    await tester.pumpAndSettle();
+
+    // 1) 主题亮度变为 dark
+    final ctx = tester.element(find.byType(Scaffold).last);
+    expect(Theme.of(ctx).brightness, Brightness.dark);
+
+    // 2) 语义色取自深色 palette（收入色与浅色不同，可区分旧实现）
+    final palette = Theme.of(ctx).extension<AppPalette>();
+    expect(palette, isNotNull);
+    expect(palette!.income, AppPalette.dark.income);
+    expect(AppPalette.dark.income, isNot(AppPalette.light.income));
+
+    // 3) 选择出现在 UI（打勾）
+    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+  });
+
+  // 持久化属于真实 I/O，单独用真实异步验证（FakeAsync 下 Hive 写入不推进）
+  test('外观：选择的模式写入 Hive 并在新实例中恢复', () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await container.read(themeModeProvider.notifier).set(ThemeMode.dark);
+    expect(Db.settings.get(ThemeModeNotifier.storageKey), 'dark');
+
+    // 重新读取：模拟重启后从 Hive 恢复
+    final restarted = ProviderContainer();
+    addTearDown(restarted.dispose);
+    expect(restarted.read(themeModeProvider), ThemeMode.dark);
   });
 }

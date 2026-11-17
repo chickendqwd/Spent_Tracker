@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/money_util.dart';
 import '../../data/models/category.dart';
 import '../../data/models/transaction.dart';
@@ -31,15 +32,10 @@ class TransactionTile extends ConsumerWidget {
         ? AppConstants.expensePrefix
         : AppConstants.incomePrefix;
     final color = isExpense
-        ? AppConstants.expenseColor
-        : AppConstants.incomeColor;
+        ? context.palette.expense
+        : context.palette.income;
     // 列表/详情显示原记账币种符号（agent v2 4.8）
-    final symbol = ref
-            .watch(currencyProvider)
-            .where((c) => c.code == transaction.currency)
-            .firstOrNull
-            ?.symbol ??
-        'S\$';
+    final symbol = symbolOf(ref.watch(currencyProvider), transaction.currency);
 
     return ListTile(
       onTap: onTap,
