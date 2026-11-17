@@ -1,17 +1,97 @@
-# spent_tracker
+# Spent Tracker
 
-A new Flutter project.
+个人记账应用：记录支出与收入，支持时间维度分析、预算管控、多货币与数据导出。
+基于 Flutter 构建，数据全部保存在本地（Hive），无需联网即可记账。
 
-## Getting Started
+## 功能
 
-This project is a starting point for a Flutter application.
+### v1 — 记账闭环
+- **记一笔**：支出/收入、金额（整数分存储，避免浮点误差）、分类、日期、备注
+- **交易明细**：按日期倒序分组展示，支持类型/分类筛选
+- **编辑与删除**：均需二次确认
+- **分类管理**：预设分类不可删除；删除自定义分类后，历史账目自动置为「未分类」
+- **月度总结**：总支出 / 总收入 / 结余 + 分类占比环形图
 
-A few resources to get you started if this is your first Flutter project:
+### v2 — 时间分析与预算管控（8 项 P0）
+- **时间筛选**：本周 / 本月 / 上月 / 近 7 天 / 自定义区间
+- **收支趋势**：近 6 或 12 个月的双线折线图（支出 / 收入）
+- **分类分析**：支出 / 收入双 Tab，环形图占比 + 金额排行
+- **预算**：总预算与分类预算，总览页进度条，超支标红；录入时「将超出」轻提示（不强制）
+- **数据导出**：CSV / JSON，经系统分享面板保存
+- **周期记账**：每周 / 每月 / 每年规则，到期日在总览页显示「今日待记」提示条，点击预填录入、手动确认入账（**不自动记账**）
+- **搜索**：按备注、分类名或金额精确匹配，可与类型 / 分类筛选叠加
+- **多货币**：基准币种 SGD；汇总（结余、趋势、预算、占比）统一按 SGD 展示，明细与详情保留原记账币种；汇率可手动修改或联网更新
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## 技术栈
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+| 用途 | 选型 |
+|---|---|
+| 框架 | Flutter (Dart) |
+| 本地存储 | Hive（含自定义 TypeAdapter，兼容旧数据字段缺失） |
+| 状态管理 | Riverpod（`Box.watch()` → StreamProvider 驱动响应式刷新） |
+| 图表 | fl_chart |
+| 分享/导出 | share_plus |
+
+## 目录结构
+
+```
+lib/
+├── app.dart / main.dart        # 入口与主题
+├── core/                       # 常量、金额与日期工具
+├── data/
+│   ├── models/                 # Category / Transaction / Currency / Budget / RecurringRule（含 *.g.dart）
+│   └── db/                     # Hive 盒子 + 各仓库（业务规则所在层）
+├── state/                      # Riverpod providers（时间区间、汇总、趋势、预算、周期规则、货币）
+└── ui/
+    ├── overview/               # 总览（时间切换/预算/趋势/分类分析/最近记录）
+    ├── transactions/           # 交易明细（搜索/筛选/时间切换）
+    ├── settings/               # 设置（分类/预算/周期记账/货币与汇率/导出）
+    └── widgets/                # 共用组件（录入面板、账目条目、详情、时间选择器）
+test/
+├── category_repository_test.dart   # v1 仓库规则（真实异步）
+├── v2_repository_test.dart         # v2 预算/时间区间/周期规则/多货币换算
+└── widget_test.dart                # UI 交互流（录入闭环、编辑确认、删除分类、月度总结、搜索）
+```
+
+## 运行
+
+```bash
+flutter pub get
+flutter run -d windows        # 桌面
+flutter run -d <device-id>    # Android / iOS 设备
+```
+
+修改 Hive 模型后需重新生成适配器：
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
+## 验证
+
+```bash
+flutter analyze   # 静态检查
+flutter test      # 18 个测试：8 个仓库/逻辑单测 + 6 个 UI 交互测试 + 4 个 v1 规则测试
+```
+
+当前状态：`flutter analyze` 无问题；`flutter test` 全部通过；`flutter run -d windows` 编译启动正常。
+
+## 数据与汇率说明
+
+- 金额一律以**整数分**存储
+- 基准币种为 **SGD**，预设币种：SGD（1.0）、CNY（0.186）、MYR（0.30）
+- 汇率含义为「1 单位本币 = ? SGD」；联网更新失败时自动回退到手动汇率，不阻塞记账
+- 预算按「月」记录；当月未设置时沿用最近一个设有预算的月份
+
+## 版本
+
+| 标签 | 说明 |
+|---|---|
+| `v1.0` | 记账闭环（记一笔 / 交易列表 / 月度总结 / 分类管理） |
+| `v2.0` | 时间筛选 / 趋势图 / 分类分析 / 预算与超支 / 导出 / 周期记账 / 搜索 / 多货币 |
+
+## 已知限制
+
+- 周期记账只做应用内提醒与预填，不自动入账，也不使用系统推送
+- 暂无云同步、深色模式、密码锁、数据导入（属 v2 明确 Non-goals）
+- 汇率联网更新依赖公开接口 `open.er-api.com`，离线时使用本地手动汇率
