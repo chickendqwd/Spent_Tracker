@@ -6,6 +6,7 @@ import 'budget_settings_page.dart';
 import 'categories_page.dart';
 import 'currency_page.dart';
 import 'export_page.dart';
+import 'import_page.dart';
 import 'recurring_rules_page.dart';
 
 /// 设置主页（v2）：分类管理 + 预算设置 + 周期记账 + 货币与汇率 + 数据导出。
@@ -93,6 +94,14 @@ class SettingsPage extends StatelessWidget {
             subtitle: '导出 CSV / JSON 备份',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ExportPage()),
+            ),
+          ),
+          _EntryTile(
+            icon: Icons.file_download_outlined,
+            title: '数据导入',
+            subtitle: '从 CSV / JSON 备份恢复（追加，自动跳过重复）',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ImportPage()),
             ),
           ),
         ],

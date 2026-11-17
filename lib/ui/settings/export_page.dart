@@ -36,7 +36,7 @@ class ExportPage extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     '导出为 CSV 或 JSON 备份文件，可保存到「下载」或发送。'
-                    '仅作备份用途，暂不支持导入。',
+                    '导出的文件可在「数据导入」中恢复。',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 16),
