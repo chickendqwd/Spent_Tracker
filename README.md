@@ -1,135 +1,137 @@
+> 中文版：[README.zh-CN.md](README.zh-CN.md)
+
 # Spent Tracker
 
-个人记账应用：记录支出与收入，支持时间维度分析、预算管控、多货币与数据导出。
-基于 Flutter 构建，数据全部保存在本地（Hive），无需联网即可记账。
+A personal expense tracker for recording spending and income, with time-based analysis, budgets, multi-currency support and data export/import. Built with Flutter; all data stays on the device in Hive, so the app works fully offline.
 
-## 功能
+## Features
 
-### v1 — 记账闭环
-- **记一笔**：支出/收入、金额（整数分存储，避免浮点误差）、分类、日期、备注
-- **交易明细**：按日期倒序分组展示，支持类型/分类筛选
-- **编辑与删除**：均需二次确认
-- **分类管理**：预设分类不可删除；删除自定义分类后，历史账目自动置为「未分类」
-- **月度总结**：总支出 / 总收入 / 结余 + 分类占比环形图
+### v1 — Core ledger
+- **Add an entry**: expense/income, amount (stored as integer cents to avoid floating-point drift), category, date, note
+- **Transaction list**: grouped by date, newest first, filterable by type and category
+- **Edit / delete**: both require a confirmation step
+- **Categories**: preset categories cannot be deleted; deleting a custom category moves its historical entries to "Uncategorized"
+- **Monthly summary**: total expense, total income, balance, plus a category-share donut chart
 
-### v2 — 时间分析与预算管控（8 项 P0）
-- **时间筛选**：本周 / 本月 / 上月 / 近 7 天 / 自定义区间
-- **收支趋势**：近 6 或 12 个月的双线折线图（支出 / 收入）
-- **分类分析**：支出 / 收入双 Tab，环形图占比 + 金额排行
-- **预算**：总预算与分类预算，总览页进度条，超支标红；录入时「将超出」轻提示（不强制）
-- **数据导出**：CSV / JSON，经系统分享面板保存
-- **周期记账**：每周 / 每月 / 每年规则，到期日在总览页显示「今日待记」提示条，点击预填录入、手动确认入账（**不自动记账**）
-- **搜索**：按备注、分类名或金额精确匹配，可与类型 / 分类筛选叠加
-- **多货币**：基准币种 SGD；汇总（结余、趋势、预算、占比）统一按 SGD 展示，明细与详情保留原记账币种；汇率可手动修改或联网更新
+### v2 — Time analysis and budgets (8 P0 items)
+- **Date range filter**: this week / this month / last month / last 7 days / custom range
+- **Trend chart**: 6- or 12-month dual line chart for expenses and income
+- **Category breakdown**: expense and income tabs, donut share plus a ranked amount list
+- **Budgets**: overall and per-category budgets, progress bars on the overview page, over-budget highlighted in red, and a soft "will exceed" hint while entering an amount (never blocking)
+- **Data export**: CSV / JSON through the system share sheet
+- **Recurring entries**: weekly / monthly / yearly rules surface a "due today" banner on the overview page; tapping it pre-fills the entry form and you confirm manually (**no automatic booking**)
+- **Search**: exact match on note, category name or amount, combinable with the type and category filters
+- **Multi-currency**: SGD is the base currency; all aggregates (balance, trend, budgets, shares) are shown in SGD while the list and detail sheet keep the original currency; exchange rates can be edited by hand or updated from the network
 
-### v2.1 — 优化打磨与深色模式
-- **深色模式**：「设置 → 外观」跟随系统 / 浅色 / 深色三选一，选择写入 Hive，重启保留
-- **配色收敛**：界面颜色统一走 `AppPalette`（ThemeExtension，深浅各一套），移除散落的硬编码色值
-- **币种符号去重**：统一由 `symbolOf()` 提供，找不到币种时回退 `S$`
+### v2.1 — Polish and dark mode
+- **Dark mode**: Settings → Appearance offers System / Light / Dark; the choice is persisted in Hive
+- **Unified palette**: all colors go through `AppPalette` (a `ThemeExtension` with light and dark variants), removing scattered hard-coded values
+- **Currency symbols**: resolved in one place by `symbolOf()`, falling back to `S$`
 
-### v2.2 — 年度报告
-- **年度趋势**：12 个月支出 / 收入双柱状图，可切换年份（不晚于当前年）
-- **关键统计**：记账笔数、月均支出（仅按有支出的月份平均）、支出最高月
-- **分类排行**：支出 / 收入双 Tab，按金额降序并显示占比
-- 入口：总览页右上角按钮，以及「设置 → 分析」
+### v2.2 — Annual report
+- **Yearly trend**: 12-month dual bar chart for expenses and income, with year switching (never past the current year)
+- **Key stats**: number of entries, average monthly expense (computed only over months that have expenses), peak expense month
+- **Category ranking**: expense and income tabs, sorted by amount with percentage shares
+- Entry points: the button at the top right of the overview page, and Settings → Analysis
 
-### v3.0 — 数据导入
-- **格式**：本应用导出的 CSV / JSON（`type, amount, currency, category, date, note, createdAt`）
-- **先预览后写入**：选文件后展示「可导入 / 重复跳过 / 格式失败 / 分类未匹配」，失败行带行号与原因（最多显示 5 条）
-- **追加式**：二次确认后逐条追加，不删除、不覆盖；同类型+同金额+同币种+同日期+同备注+同分类视为重复并跳过（含文件内重复）
-- **分类映射**：按「类型 + 分类名」匹配现有分类，找不到的落为「未分类」
-- 入口：「设置 → 数据 → 数据导入」
+### v3.0 — Data import
+- **Format**: the CSV / JSON files this app exports (`type, amount, currency, category, date, note, createdAt`)
+- **Preview before writing**: after choosing a file the app shows how many rows are importable, duplicates to skip, parse failures and unmatched categories, with row numbers and reasons for the first five failures
+- **Append only**: after a confirmation dialog entries are appended one by one; nothing is deleted or overwritten, and rows matching an existing entry on type + amount + currency + date + note + category are skipped as duplicates (including duplicates inside the same file)
+- **Category mapping**: matched by type + category name; unmatched names become "Uncategorized"
+- Entry point: Settings → Data → Import
 
-## 技术栈
+## Tech stack
 
-| 用途 | 选型 |
+| Purpose | Choice |
 |---|---|
-| 框架 | Flutter (Dart) |
-| 本地存储 | Hive（含自定义 TypeAdapter，兼容旧数据字段缺失） |
-| 状态管理 | Riverpod（`Box.watch()` → StreamProvider 驱动响应式刷新） |
-| 图表 | fl_chart |
-| 分享/导出 | share_plus |
-| 文件选择（导入） | file_picker |
+| Framework | Flutter (Dart) |
+| Local storage | Hive with custom `TypeAdapter`s that tolerate missing legacy fields |
+| State management | Riverpod (`Box.watch()` feeding `StreamProvider`s for reactive updates) |
+| Charts | fl_chart |
+| Share / export | share_plus |
+| File picking (import) | file_picker |
 
-## 目录结构
+## Project structure
 
 ```
 lib/
-├── app.dart / main.dart        # 入口与主题
-├── core/                       # 常量、金额/日期工具、主题配色（theme/）、导入解析（io/）
+├── app.dart / main.dart        # entry point and theme setup
+├── core/                       # constants, money/date helpers, theme palette (theme/), import parser (io/)
 ├── data/
-│   ├── models/                 # Category / Transaction / Currency / Budget / RecurringRule（含 *.g.dart）
-│   └── db/                     # Hive 盒子 + 各仓库（业务规则所在层，含导入服务）
-├── state/                      # Riverpod providers（时间区间、汇总、趋势、预算、周期规则、货币、主题、年报）
+│   ├── models/                 # Category / Transaction / Currency / Budget / RecurringRule (with *.g.dart)
+│   └── db/                     # Hive boxes and repositories (business rules live here, including the import service)
+├── state/                      # Riverpod providers (range, summary, trend, budget, recurring, currency, theme, annual)
 └── ui/
-    ├── overview/               # 总览（时间切换/预算/趋势/分类分析/最近记录）
-    ├── transactions/           # 交易明细（搜索/筛选/时间切换）
-    ├── analysis/               # 年度报告
-    ├── settings/               # 设置（分类/预算/周期记账/货币与汇率/导出/导入/外观）
-    └── widgets/                # 共用组件（录入面板、账目条目、详情、时间选择器）
+    ├── overview/               # overview: range switcher, budgets, trend, category breakdown, recent entries
+    ├── transactions/           # transaction list with search, filters and range switching
+    ├── analysis/               # annual report
+    ├── settings/               # categories, budgets, recurring rules, currencies, export, import, appearance
+    └── widgets/                # shared widgets: entry sheet, transaction tile, detail sheet, range picker
 test/
-├── category_repository_test.dart   # v1 仓库规则（真实异步）
-├── v2_repository_test.dart         # v2 预算/时间区间/周期规则/多货币换算
-├── annual_summary_test.dart        # 年度聚合规则
-├── import_test.dart                # 导入解析（CSV 引号/非法行/JSON）与去重、分类映射
-└── widget_test.dart                # UI 交互流（录入闭环、编辑确认、删除分类、月度总结、搜索、深色模式）
+├── category_repository_test.dart   # v1 repository rules (real async)
+├── v2_repository_test.dart         # v2 budgets, date ranges, recurring rules, currency conversion
+├── annual_summary_test.dart        # annual aggregation rules
+├── import_test.dart                # CSV/JSON parsing (quotes, invalid rows) and dedup / category mapping
+└── widget_test.dart                # UI flows: entry, edit confirmation, category deletion, monthly summary, search, dark mode
 ```
 
-## 运行
+## Getting started
 
 ```bash
 flutter pub get
-flutter run -d windows        # 桌面
-flutter run -d <device-id>    # Android / iOS 设备
+flutter run -d windows        # desktop
+flutter run -d <device-id>    # Android / iOS device
 ```
 
-### iOS 安装（iLoader + SideStore）
-
-Windows 上无法本地构建 iOS 包，仓库内置 GitHub Actions 流水线，在 macOS 机器上产出**未签名 IPA**，签名由 iPhone 端的 iLoader / SideStore 完成：
-
-1. 推送标签（`git push origin --tags`）会自动触发 `.github/workflows/ios-ipa.yml`；也可在 Actions 页手动 `Run workflow`
-2. 构建完成后，在 Actions 的产物（artifact）或 Release 附件里下载 `SpentTracker-unsigned.ipa`
-3. 用 iLoader 生成 Pairing File 并导入 SideStore
-4. 在 SideStore / iLoader 中导入该 IPA，Bundle ID 填 `com.spenttracker.spentTracker`，用自己的 Apple ID 签名安装
-5. 免费 Apple ID 的签名 7 天有效，请开启 SideStore 的自动刷新；免费账号同时最多签名 3 个 App
-
-注意：重装（卸载后安装）会清空本地 Hive 数据，升级覆盖安装则保留。
-
-修改 Hive 模型后需重新生成适配器：
+Regenerate Hive adapters after changing a model:
 
 ```bash
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-## 验证
+## iOS install (iLoader + SideStore)
+
+iOS builds cannot be produced on Windows, so the repo ships a GitHub Actions workflow that builds an **unsigned IPA** on a macOS runner; signing happens on the phone through iLoader / SideStore.
+
+1. Pushing a tag (`git push origin --tags`) triggers `.github/workflows/ios-ipa.yml`; it can also be started manually with `Run workflow` on the Actions page
+2. Download `SpentTracker-unsigned.ipa` from the workflow artifact or the GitHub Release
+3. Use iLoader on the computer to place a pairing file, then install SideStore
+4. Import the IPA in SideStore, signed with your own Apple ID; the bundle identifier is `com.spenttracker.spentTracker`
+5. A free Apple ID signature lasts 7 days, so keep SideStore's automatic refresh enabled; a free account can sign at most 3 apps at a time
+
+Note: reinstalling (uninstall then install) clears the local Hive data; an upgrade install keeps it.
+
+## Verification
 
 ```bash
-flutter analyze   # 静态检查
-flutter test      # 27 个测试：17 个逻辑/仓库单测 + 8 个 UI 交互测试 + 2 个外观持久化测试
+flutter analyze   # static analysis
+flutter test      # 27 tests: 17 logic/repository tests, 8 UI interaction tests, 2 appearance persistence tests
 ```
 
-当前状态：`flutter analyze` 无问题；`flutter test` 27/27 通过。
+Current status: `flutter analyze` reports no issues; `flutter test` passes 27/27. `flutter build windows --debug` also succeeds, which confirms the native file-picker plugin compiles.
 
-## 数据与汇率说明
+## Money and exchange rates
 
-- 金额一律以**整数分**存储
-- 基准币种为 **SGD**，预设币种：SGD（1.0）、CNY（0.186）、MYR（0.30）
-- 汇率含义为「1 单位本币 = ? SGD」；联网更新失败时自动回退到手动汇率，不阻塞记账
-- 预算按「月」记录；当月未设置时沿用最近一个设有预算的月份
+- Amounts are always stored as **integer cents**
+- Base currency is **SGD**; presets are SGD (1.0), CNY (0.186), MYR (0.30)
+- A rate means "1 unit of this currency = ? SGD"; if the online update fails the app falls back to the manual rates and never blocks data entry
+- Budgets are monthly; a month without an explicit budget inherits the most recent month that has one
 
-## 版本
+## Releases
 
-| 标签 | 说明 |
+| Tag | Highlights |
 |---|---|
-| `v1.0` | 记账闭环（记一笔 / 交易列表 / 月度总结 / 分类管理） |
-| `v2.0` | 时间筛选 / 趋势图 / 分类分析 / 预算与超支 / 导出 / 周期记账 / 搜索 / 多货币 |
-| `v2.1` | 深色模式 / 配色收敛 / 币种符号去重 |
-| `v2.2` | 年度报告（12 月柱状图、关键统计、分类排行） |
-| `v3.0` | 数据导入（CSV / JSON 预览、去重、分类名映射） |
+| `v1.0` | Core ledger: add entry, transaction list, monthly summary, category management |
+| `v2.0` | Date filters, trend chart, category breakdown, budgets and over-budget warnings, export, recurring entries, search, multi-currency |
+| `v2.1` | Dark mode, unified palette, shared currency symbol helper |
+| `v2.2` | Annual report: 12-month bars, key stats, category ranking |
+| `v3.0` | Data import: CSV / JSON preview, deduplication, category name mapping |
+| `v3.1` | Faster import deduplication, expanded documentation |
 
-## 已知限制
+## Known limitations
 
-- 周期记账只做应用内提醒与预填，不自动入账，也不使用系统推送
-- 导入的去重键为「类型+金额+币种+日期+备注+分类名」，两笔刚好完全相同的真实记录会被误判为重复而跳过
-- 暂无云同步、密码锁（属后续版本）
-- 汇率联网更新依赖公开接口 `open.er-api.com`，离线时使用本地手动汇率
+- Recurring entries only remind and pre-fill inside the app; they are never booked automatically and do not use push notifications
+- The import deduplication key is type + amount + currency + date + note + category, so two genuinely identical entries would be treated as duplicates and skipped
+- No cloud sync and no app lock yet (planned for a later version)
+- Online rate updates depend on the public `open.er-api.com` endpoint; offline the app uses the locally stored rates
