@@ -25,8 +25,8 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Show Flutter version
-        run: flutter --version
+      - name: Show toolchain versions
+        run: flutter doctor -v
 
       - name: Install dependencies
         run: flutter pub get
@@ -55,13 +55,13 @@ jobs:
         with:
           files: SpentTracker-unsigned.ipa
           body: |
-            ## iOS 安装说明（未签名 IPA）
+            ## iOS install (unsigned IPA)
 
-            本包为**未签名 IPA**，需在 iPhone 上用 iLoader / SideStore 以你的 Apple ID 签名安装。
+            This build is an **unsigned IPA**. Sign it on your iPhone with your own Apple ID through iLoader / SideStore.
 
-            1. 下载 `SpentTracker-unsigned.ipa`
-            2. 用 iLoader 生成配对文件（Pairing File），并导入 SideStore
-            3. 在 SideStore / iLoader 中导入本 IPA，填写 Bundle ID `com.spenttracker.spentTracker` 后签名安装
-            4. 免费 Apple ID 签名有效期 7 天，请保持 SideStore 的自动刷新开启
+            1. Download `SpentTracker-unsigned.ipa`
+            2. Place the pairing file with iLoader (see the SideStore docs), then install SideStore
+            3. Import the IPA in SideStore; the bundle identifier is `com.spenttracker.spentTracker`
+            4. A free Apple ID signature lasts 7 days - keep SideStore's automatic refresh enabled
 
-            注意：免费账号同一时间最多签名 3 个 App；每次重签后本地数据仍保留（Hive 数据随 App 沙盒保留，重装会清空）。
+            A free Apple Account can sign at most 3 apps at a time. Uninstalling clears the local Hive data; an upgrade install keeps it.
