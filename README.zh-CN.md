@@ -77,6 +77,15 @@ test/
 └── widget_test.dart                # UI 交互流（录入闭环、编辑确认、删除分类、月度总结、搜索、深色模式）
 ```
 
+## 下载
+
+| 平台 | 文件 | 安装方式 |
+|---|---|---|
+| 安卓 | [SpentTracker-3.1.0-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.1.0-android.apk)（arm64，18 MB） | 传到手机直接打开安装，按提示允许「安装未知来源应用」 |
+| iOS | [SpentTracker-unsigned.ipa](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-unsigned.ipa) | 未签名包，需用 iLoader + SideStore 在手机上签名（见下文） |
+
+所有安装包都挂在 [Releases](https://github.com/chickendqwd/Spent_Tracker/releases)。APK 用开发密钥签名，适合测试；换一台机器重新构建的版本无法覆盖安装。
+
 ## 运行
 
 ```bash

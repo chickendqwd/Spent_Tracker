@@ -76,6 +76,15 @@ test/
 └── widget_test.dart                # UI flows: entry, edit confirmation, category deletion, monthly summary, search, dark mode
 ```
 
+## Downloads
+
+| Platform | File | Install |
+|---|---|---|
+| Android | [SpentTracker-3.1.0-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.1.0-android.apk) (arm64, 18 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
+| iOS | [SpentTracker-unsigned.ipa](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-unsigned.ipa) | Unsigned build: sign it on the iPhone with iLoader + SideStore (see below) |
+
+All builds are attached to [Releases](https://github.com/chickendqwd/Spent_Tracker/releases). The APK is signed with the development key, which is fine for testing but means a build produced on another machine cannot be installed over it.
+
 ## Getting started
 
 ```bash
