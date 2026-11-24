@@ -294,6 +294,7 @@ class _RuleDialogState extends State<_RuleDialog> {
   late String _currency;
   late RecurringFrequency _frequency;
   late int _dayValue;
+  late final TextEditingController _dayController;
   late DateTime _startDate;
 
   static final _amountFormat = RegExp(r'^\d{0,7}(\.\d{0,2})?$');
@@ -308,6 +309,7 @@ class _RuleDialogState extends State<_RuleDialog> {
     _currency = widget.initialCurrency;
     _frequency = widget.initialFrequency;
     _dayValue = widget.initialDayValue;
+    _dayController = TextEditingController(text: '${widget.initialDayValue}');
     _startDate = widget.initialStartDate;
   }
 
@@ -315,6 +317,7 @@ class _RuleDialogState extends State<_RuleDialog> {
   void dispose() {
     _amountController.dispose();
     _noteController.dispose();
+    _dayController.dispose();
     super.dispose();
   }
 
@@ -399,6 +402,7 @@ class _RuleDialogState extends State<_RuleDialog> {
               onChanged: (v) => setState(() {
                 _frequency = v ?? RecurringFrequency.weekly;
                 _dayValue = 1;
+                _dayController.text = '1';
               }),
             ),
             const SizedBox(height: 12),
@@ -416,20 +420,34 @@ class _RuleDialogState extends State<_RuleDialog> {
                 ],
                 onChanged: (v) => setState(() => _dayValue = v ?? 1),
               )
-            else
+            else ...[
               TextField(
+                controller: _dayController,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                controller: TextEditingController(text: '$_dayValue'),
                 decoration: const InputDecoration(
                   labelText: '几号（1-31）',
+                  helperText: '超过当月天数的日期按月末处理',
                   border: OutlineInputBorder(),
                 ),
                 onChanged: (v) {
-                  final n = int.tryParse(v) ?? 1;
-                  _dayValue = n.clamp(1, 31);
+                  final n = int.tryParse(v);
+                  if (n == null) return;
+                  setState(() => _dayValue = n.clamp(1, 31));
                 },
               ),
+              if (_dayValue > 28)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    '小月/平年按月末：如 31 号在 4 月记 30 日、2 月记 28 日',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.palette.muted,
+                    ),
+                  ),
+                ),
+            ],
             const SizedBox(height: 12),
             ListTile(
               contentPadding: EdgeInsets.zero,

@@ -43,16 +43,27 @@ final recurringRuleProvider =
 /// 判定某天是否命中周期规则。
 /// 口径：weekly 按周几（周一=1…周日=7）；monthly 按月几号；
 /// yearly 为「每年 startDate 所在月份的 dayValue 号」（模型未含月份字段，以此界定，注释说明）。
+///
+/// v3.2：monthly / yearly 的日号按当月天数夹取——
+/// 选 31 号时，4 月落到 30 日、2 月落到 28/29 日；选 29 号时平年 2 月落到 28 日。
+/// 保证每月恰好命中一次，而不是在小月整月不命中。
 bool ruleMatches(RecurringRule rule, DateTime day) {
   switch (rule.recurringFrequency) {
     case RecurringFrequency.weekly:
       return day.weekday == rule.dayValue;
     case RecurringFrequency.monthly:
-      return day.day == rule.dayValue;
+      return day.day == _clampedDay(rule.dayValue, day.year, day.month);
     case RecurringFrequency.yearly:
       return day.month == DateUtil.fromDayKey(rule.startDate).month &&
-          day.day == rule.dayValue;
+          day.day == _clampedDay(rule.dayValue, day.year, day.month);
   }
+}
+
+/// 把「每月几号」夹到当月合法范围（31 → 小月月末；29 → 平年 2 月为 28）。
+int _clampedDay(int dayValue, int year, int month) {
+  final lastDay = DateTime(year, month + 1, 0).day;
+  if (dayValue < 1) return 1;
+  return dayValue > lastDay ? lastDay : dayValue;
 }
 
 /// 今天到期的启用规则（用于总览「今日待记」提示条）。

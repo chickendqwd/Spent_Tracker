@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/analytics/trend_analytics.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_util.dart';
 import '../../core/utils/money_util.dart';
@@ -290,7 +291,8 @@ class _BudgetCard extends StatelessWidget {
   }
 }
 
-/// 收支趋势折线图：近 6 / 12 个月，双线（支出、收入）。
+/// 收支趋势折线图（v3.2）：区间可切（本周/本月/近3月/近6月/近12月），
+/// 按区间步长降采样，呈现日间波动；双线（支出、收入）。
 class _TrendCard extends ConsumerWidget {
   const _TrendCard({required this.symbol});
 
@@ -299,7 +301,7 @@ class _TrendCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final trend = ref.watch(trendProvider);
-    final count = ref.watch(trendMonthCountProvider);
+    final range = ref.watch(trendRangeProvider);
 
     return Card(
       child: Padding(
@@ -307,26 +309,11 @@ class _TrendCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Text('收支趋势', style: Theme.of(context).textTheme.titleMedium),
-                const Spacer(),
-                SegmentedButton<int>(
-                  showSelectedIcon: false,
-                  style: const ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  segments: const [
-                    ButtonSegment(value: 6, label: Text('近6月')),
-                    ButtonSegment(value: 12, label: Text('近12月')),
-                  ],
-                  selected: {count},
-                  onSelectionChanged: (s) => ref
-                      .read(trendMonthCountProvider.notifier)
-                      .set(s.first),
-                ),
-              ],
+            Text('收支趋势', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 10),
+            _TrendRangePicker(
+              current: range,
+              onChanged: (r) => ref.read(trendRangeProvider.notifier).set(r),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -363,10 +350,16 @@ class _TrendCard extends ConsumerWidget {
                         reservedSize: 28,
                         getTitlesWidget: (v, meta) {
                           final i = v.round();
-                          if (i < 0 || i >= trend.length) return const SizedBox.shrink();
-                          final m = trend[i].month;
+                          if (i < 0 || i >= trend.length) {
+                            return const SizedBox.shrink();
+                          }
+                          // 点数多时抽样显示标签，避免 X 轴文字重叠
+                          final every = (trend.length / 6).ceil();
+                          if (i % every != 0 && i != trend.length - 1) {
+                            return const SizedBox.shrink();
+                          }
                           return Text(
-                            '${int.parse(m.substring(5))}月',
+                            trend[i].shortLabel,
                             style: TextStyle(fontSize: 10, color: context.palette.muted),
                           );
                         },
@@ -378,7 +371,7 @@ class _TrendCard extends ConsumerWidget {
                       getTooltipItems: (spots) => [
                         for (final s in spots)
                           LineTooltipItem(
-                            '${s.y / 100} $symbol',
+                            _tooltipText(s, trend),
                             TextStyle(color: context.palette.onChartLabel),
                           ),
                       ],
@@ -404,6 +397,15 @@ class _TrendCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// 悬浮提示：类型 + 区间 + 金额。
+  String _tooltipText(LineBarSpot spot, List<TrendBucket> trend) {
+    final i = spot.x.round();
+    if (i < 0 || i >= trend.length) return '';
+    final b = trend[i];
+    final label = spot.barIndex == 0 ? '支出' : '收入';
+    return '$label ${b.rangeLabel}\n${MoneyUtil.format(spot.y.round(), symbol: symbol)}';
   }
 
   Widget _legendDot(String label, Color color) {
@@ -440,7 +442,7 @@ class _TrendCard extends ConsumerWidget {
     );
   }
 
-  double _maxY(List<MonthlyPoint> trend) {
+  double _maxY(List<TrendBucket> trend) {
     var m = 0.0;
     for (final p in trend) {
       m = m > p.expense ? m : p.expense.toDouble();
@@ -449,7 +451,7 @@ class _TrendCard extends ConsumerWidget {
     return m;
   }
 
-  double _niceInterval(List<MonthlyPoint> trend) {
+  double _niceInterval(List<TrendBucket> trend) {
     final maxY = _maxY(trend);
     if (maxY <= 0) return 1000;
     // 取 1/2/5×10^n 步长，使 Y 轴刻度友好
@@ -470,6 +472,70 @@ class _TrendCard extends ConsumerWidget {
       r /= 10;
     }
     return r;
+  }
+}
+
+/// 趋势区间选择：本周 / 本月 / 近 3 月平铺，近 6 月 / 近 12 月收进「更多…」菜单。
+class _TrendRangePicker extends StatelessWidget {
+  const _TrendRangePicker({required this.current, required this.onChanged});
+
+  final TrendRange current;
+  final ValueChanged<TrendRange> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final overflowSelected = TrendRange.overflow.contains(current);
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (final r in TrendRange.pinned)
+          ChoiceChip(
+            label: Text(r.label),
+            selected: current == r,
+            visualDensity: VisualDensity.compact,
+            onSelected: (_) => onChanged(r),
+          ),
+        if (overflowSelected)
+          // 选中长区间时把当前档位显示出来，避免「没有选中项」的错觉
+          ChoiceChip(
+            label: Text(current.label),
+            selected: true,
+            visualDensity: VisualDensity.compact,
+            onSelected: (_) => onChanged(current),
+          ),
+        // 「更多…」入口常驻：默认选中近 6 月时也要能切到近 12 月
+        PopupMenuButton<TrendRange>(
+          tooltip: '更多区间',
+          onSelected: onChanged,
+          itemBuilder: (_) => [
+            for (final r in TrendRange.overflow)
+              PopupMenuItem(value: r, child: Text(r.label)),
+          ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '更多…',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.palette.muted,
+                  ),
+                ),
+                Icon(
+                  Icons.expand_more,
+                  size: 16,
+                  color: context.palette.muted,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

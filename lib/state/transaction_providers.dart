@@ -33,10 +33,3 @@ final transactionProvider =
     NotifierProvider<TransactionNotifier, List<Transaction>>(
       TransactionNotifier.new,
     );
-
-/// 最近 N 条记录（不限类型），供总览页使用。
-final recentTransactionsProvider = Provider<List<Transaction>>((ref) {
-  const n = 5;
-  final all = ref.watch(transactionProvider);
-  return all.length <= n ? all : all.sublist(0, n);
-});

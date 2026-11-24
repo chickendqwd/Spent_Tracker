@@ -42,7 +42,12 @@ class AddTransactionSheet extends ConsumerStatefulWidget {
 }
 
 /// 金额输入格式化：整数位≤7，小数位≤2（元）。
+/// 被拦截时回调 [onRejected]，让界面能给出明确提示（v3.2 · C11），而不是静默吞掉输入。
 class _AmountInputFormatter extends TextInputFormatter {
+  _AmountInputFormatter({required this.onRejected});
+
+  final VoidCallback onRejected;
+
   static final _pattern = RegExp(r'^\d{0,7}(\.\d{0,2})?$');
 
   @override
@@ -50,7 +55,9 @@ class _AmountInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    return _pattern.hasMatch(newValue.text) ? newValue : oldValue;
+    if (_pattern.hasMatch(newValue.text)) return newValue;
+    onRejected();
+    return oldValue;
   }
 }
 
@@ -127,9 +134,20 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   }
 
   Future<void> _save() async {
-    final cents = MoneyUtil.parseToCents(_amountController.text);
-    if (cents == null || cents <= 0) {
-      setState(() => _amountError = '请输入有效金额');
+    final text = _amountController.text.trim();
+    final cents = MoneyUtil.parseToCents(text);
+    if (text.isEmpty) {
+      setState(() => _amountError = '请输入金额');
+      return;
+    }
+    if (cents == null) {
+      setState(
+        () => _amountError = '金额格式无效，请输入数字（最多 7 位整数、2 位小数）',
+      );
+      return;
+    }
+    if (cents <= 0) {
+      setState(() => _amountError = '金额必须大于 0');
       return;
     }
     // 与 UI 高亮一致的分类：未选择或原分类已删除时默认取该类型第一个
@@ -264,7 +282,22 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    inputFormatters: [_AmountInputFormatter()],
+                    inputFormatters: [
+                      _AmountInputFormatter(
+                        onRejected: () {
+                          if (_amountError == null) {
+                            setState(
+                              () => _amountError = '整数最多 7 位、小数最多 2 位',
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                    onChanged: (_) {
+                      if (_amountError != null) {
+                        setState(() => _amountError = null);
+                      }
+                    },
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w600,

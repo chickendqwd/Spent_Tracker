@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/icon_util.dart';
 import '../../data/models/category.dart';
 import '../../data/models/transaction_type.dart';
 import '../../state/category_providers.dart';
@@ -19,27 +20,31 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
   /// 0=支出，1=收入
   int _tab = 0;
 
+  /// 内置 emoji 候选池（v3.2 扩充）：按「餐饮 / 交通 / 购物 / 居住 / 娱乐 /
+  /// 医疗 / 教育 / 收入 / 生活 / 运动」常用类目组织，仍可通过下方输入框自定义。
   static const _iconChoices = [
-    '🍜',
-    '🚌',
-    '🛍️',
-    '🏠',
-    '🎮',
-    '💊',
-    '📚',
-    '💼',
-    '🧧',
-    '💻',
-    '📈',
-    '📦',
-    '✈️',
-    '🎬',
-    '☕',
-    '🎁',
-    '👕',
-    '🐱',
-    '🏃',
-    '📱',
+    // 餐饮
+    '🍜', '🍱', '🍔', '🍕', '🍰', '🍎', '☕', '🍺', '🥤', '🥗',
+    // 交通
+    '🚌', '🚇', '🚗', '🚕', '✈️', '🚲', '⛽', '🅿️', '🛵', '🚄',
+    // 购物
+    '🛍️', '🛒', '👕', '👟', '💄', '💍', '🎁', '📦', '💳', '🏷️',
+    // 居住
+    '🏠', '💡', '🛋️', '🧹', '🔧', '🚿', '🪑', '🧺',
+    // 娱乐
+    '🎮', '🎬', '🎵', '🎤', '🎨', '🎟️', '📺', '🧩',
+    // 医疗
+    '💊', '🏥', '🩺', '💉', '🦷', '🧴',
+    // 教育
+    '📚', '✏️', '🎓', '💻', '🖊️', '🔬',
+    // 收入
+    '💼', '🧧', '📈', '💰', '💵', '🏦',
+    // 生活
+    '📱', '🐱', '🐶', '🌱', '🧸', '🍼', '🪴', '👶',
+    // 运动
+    '🏃', '🏋️', '⚽', '🎾', '🏊', '🚴',
+    // 其他
+    '🔖', '⭐', '✅', '❓',
   ];
 
   Future<void> _addCategory() async {
@@ -188,20 +193,39 @@ class _CategoryDialog extends StatefulWidget {
 
 class _CategoryDialogState extends State<_CategoryDialog> {
   late final TextEditingController _nameController;
+  late final TextEditingController _iconController;
   late String _icon;
   String? _nameError;
+  String? _iconError;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName ?? '');
-    _icon = widget.initialIcon ?? '📦';
+    _iconController = TextEditingController();
+    _icon = widget.initialIcon ?? kFallbackCategoryIcon;
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _iconController.dispose();
     super.dispose();
+  }
+
+  /// 自定义图标输入：合法（1–2 个字符）即生效，非法时保留上一个选择并提示。
+  void _onCustomIconChanged(String value) {
+    final normalized = normalizeCategoryIcon(value);
+    setState(() {
+      if (normalized != null) {
+        _icon = normalized;
+        _iconError = null;
+      } else if (value.trim().isEmpty) {
+        _iconError = null;
+      } else {
+        _iconError = '请输入 1 个 emoji（最多 2 个字符）';
+      }
+    });
   }
 
   void _submit() {
@@ -218,42 +242,82 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     final textTheme = Theme.of(context).textTheme;
     return AlertDialog(
       title: Text(widget.title),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '所属类型：${TransactionType.fromIndex(widget.type).label}',
-            style: textTheme.bodySmall?.copyWith(color: context.palette.muted),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _nameController,
-            autofocus: true,
-            decoration: InputDecoration(
-              labelText: '分类名称',
-              hintText: '如：宠物、健身',
-              errorText: _nameError,
-              border: const OutlineInputBorder(),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '所属类型：${TransactionType.fromIndex(widget.type).label}',
+              style: textTheme.bodySmall?.copyWith(color: context.palette.muted),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text('图标', style: textTheme.titleSmall),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final icon in widget.iconChoices)
-                ChoiceChip(
-                  avatar: Text(icon, style: const TextStyle(fontSize: 18)),
-                  label: const SizedBox.shrink(),
-                  selected: _icon == icon,
-                  onSelected: (_) => setState(() => _icon = icon),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _nameController,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: '分类名称',
+                hintText: '如：宠物、健身',
+                errorText: _nameError,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('图标', style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 132,
+              child: SingleChildScrollView(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final icon in widget.iconChoices)
+                      ChoiceChip(
+                        avatar: Text(
+                          icon,
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                        label: const SizedBox.shrink(),
+                        selected: _icon == icon,
+                        onSelected: (_) {
+                          _iconController.clear();
+                          setState(() {
+                            _icon = icon;
+                            _iconError = null;
+                          });
+                        },
+                      ),
+                  ],
                 ),
-            ],
-          ),
-        ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _iconController,
+              onChanged: _onCustomIconChanged,
+              decoration: InputDecoration(
+                labelText: '自定义图标（可选）',
+                hintText: '输入 1 个 emoji，如 🐹',
+                errorText: _iconError,
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text(
+                  '当前：',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: context.palette.muted,
+                  ),
+                ),
+                Text(_icon, style: const TextStyle(fontSize: 20)),
+              ],
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(

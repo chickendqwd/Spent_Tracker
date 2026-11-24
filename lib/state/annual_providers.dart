@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/analytics/trend_analytics.dart';
 import '../core/utils/date_util.dart';
 import '../data/models/transaction_type.dart';
 import 'category_providers.dart';
 import 'currency_providers.dart';
 import 'summary_providers.dart';
 import 'transaction_providers.dart';
-import 'trend_providers.dart';
 
 /// 某一年的收支汇总（金额统一为基准币种 SGD 分）。
 class AnnualSummary {

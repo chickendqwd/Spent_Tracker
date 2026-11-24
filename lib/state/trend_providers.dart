@@ -1,62 +1,31 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/utils/date_util.dart';
-import '../data/models/transaction_type.dart';
+import '../core/analytics/trend_analytics.dart';
 import 'currency_providers.dart';
 import 'transaction_providers.dart';
 
-/// 某月收支点（金额为基准币种 SGD 分）。
-class MonthlyPoint {
-  const MonthlyPoint({
-    required this.month,
-    required this.expense,
-    required this.income,
-  });
-
-  /// yyyy-MM
-  final String month;
-  final int expense;
-  final int income;
-}
-
-/// 趋势图展示月数：6 / 12。
-class TrendMonthCountNotifier extends Notifier<int> {
+/// 趋势图当前区间（v3.2）：默认近 6 月，与旧版默认一致。
+class TrendRangeNotifier extends Notifier<TrendRange> {
   @override
-  int build() => 6;
+  TrendRange build() => TrendRange.sixMonths;
 
-  void set(int value) => state = value;
+  void set(TrendRange value) => state = value;
 }
 
-final trendMonthCountProvider =
-    NotifierProvider<TrendMonthCountNotifier, int>(TrendMonthCountNotifier.new);
+final trendRangeProvider =
+    NotifierProvider<TrendRangeNotifier, TrendRange>(TrendRangeNotifier.new);
 
-/// 最近 N 个月收支趋势（含当前月；无数据月份画 0）。
-final trendProvider = Provider<List<MonthlyPoint>>((ref) {
+/// 所选区间内按步长采样后的收支桶（金额为基准币种分）。
+///
+/// 与总览顶部的时间筛选相互独立：顶部筛选只管总账与明细列表。
+final trendProvider = Provider<List<TrendBucket>>((ref) {
   final transactions = ref.watch(transactionProvider);
   final currencies = ref.watch(currencyProvider);
-  final count = ref.watch(trendMonthCountProvider);
+  final range = ref.watch(trendRangeProvider);
 
-  final now = DateTime.now();
-  final months = List<String>.generate(count, (i) {
-    final d = DateTime(now.year, now.month - (count - 1 - i), 1);
-    return DateUtil.monthKey(d);
-  });
-  final map = <String, List<int>>{for (final m in months) m: [0, 0]};
-
-  for (final t in transactions) {
-    final key = DateUtil.monthKey(DateUtil.fromDayKey(t.date));
-    final bucket = map[key];
-    if (bucket == null) continue;
-    final cents = toBaseCents(currencies, t.amount, t.currency);
-    if (t.transactionType == TransactionType.expense) {
-      bucket[0] += cents;
-    } else {
-      bucket[1] += cents;
-    }
-  }
-
-  return [
-    for (final m in months)
-      MonthlyPoint(month: m, expense: map[m]![0], income: map[m]![1]),
-  ];
+  return computeTrendBuckets(
+    ranges: trendBucketRanges(range, DateTime.now()),
+    transactions: transactions,
+    toCents: (amount, code) => toBaseCents(currencies, amount, code),
+  );
 });

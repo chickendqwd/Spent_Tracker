@@ -309,6 +309,29 @@ void main() {
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
   });
 
+  testWidgets('趋势卡：区间平铺三项 + 更多菜单可选长区间', (tester) async {
+    await pumpApp(tester);
+
+    // v3.2：本周 / 本月 / 近3月 平铺，长区间收进「更多…」
+    // 顶部时间筛选器同样有「本周 / 本月」，故这两项用 findsWidgets
+    expect(find.text('本周'), findsWidgets);
+    expect(find.text('本月'), findsWidgets);
+    expect(find.text('近3月'), findsOneWidget);
+    expect(find.text('更多…'), findsOneWidget);
+
+    // 打开更多菜单 → 出现近 6 月 / 近 12 月
+    await tester.tap(find.text('更多…'));
+    await tester.pumpAndSettle();
+    expect(find.text('近12月'), findsWidgets);
+
+    // 选中近 12 月后：当前档位变成常驻 chip，入口保持可用
+    await tester.tap(find.text('近12月').last);
+    await tester.pumpAndSettle();
+    expect(find.text('近12月'), findsOneWidget);
+    expect(find.text('近6月'), findsNothing);
+    expect(find.text('更多…'), findsOneWidget);
+  });
+
   // 持久化属于真实 I/O，单独用真实异步验证（FakeAsync 下 Hive 写入不推进）
   test('外观：选择的模式写入 Hive 并在新实例中恢复', () async {
     final container = ProviderContainer();
