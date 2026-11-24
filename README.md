@@ -41,6 +41,14 @@ A personal expense tracker for recording spending and income, with time-based an
 - **Category mapping**: matched by type + category name; unmatched names become "Uncategorized"
 - Entry point: Settings → Data → Import
 
+### v3.2 — Trend ranges, category icons, safer dates
+- **Trend ranges**: the trend card switches between this week / this month / last 3 months / last 6 months / last 12 months; the three most used ranges are always visible and the longer ones sit behind a "More…" menu that stays reachable at any setting
+- **Step sampling**: the 3 / 6 / 12 month ranges bucket transactions into fixed 5/10/15-day steps (18/18/24 points) so a chart never collapses into dozens of unreadable points; buckets are computed in one O(n) pass and empty periods are kept as zero
+- **Category icons**: the emoji picker grew to ~90 icons grouped by theme, and you can type your own icon; input is validated by grapheme clusters (1–2 clusters, so a composed family emoji counts as one), and anything invalid falls back to 📦
+- **Month-end recurring dates**: a monthly rule on the 31st now fires on the last day of shorter months (Apr 30, Feb 28/29); yearly rules on Feb 29 fall back to Feb 28 in common years
+- **Clearer amount validation**: the entry sheet now names the problem — empty, invalid format, or not greater than zero — and clears the error as you type
+- Settings → Recurring rules explains the month-end rule inline; a dead provider was removed
+
 ## Tech stack
 
 | Purpose | Choice |
@@ -73,14 +81,16 @@ test/
 ├── v2_repository_test.dart         # v2 budgets, date ranges, recurring rules, currency conversion
 ├── annual_summary_test.dart        # annual aggregation rules
 ├── import_test.dart                # CSV/JSON parsing (quotes, invalid rows) and dedup / category mapping
-└── widget_test.dart                # UI flows: entry, edit confirmation, category deletion, monthly summary, search, dark mode
+├── trend_analytics_test.dart       # trend bucketing: boundaries, continuity, step sampling, conversion calls
+├── rule_and_icon_test.dart         # month-end clamping for recurring rules, category icon validation
+└── widget_test.dart                # UI flows: entry, edit confirmation, category deletion, monthly summary, search, dark mode, trend ranges
 ```
 
 ## Downloads
 
 | Platform | File | Install |
 |---|---|---|
-| Android | [SpentTracker-3.1.0-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.1.0-android.apk) (arm64, 18 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
+| Android | [SpentTracker-3.2.0-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.2.0-android.apk) (arm64, 19 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
 | iOS | [SpentTracker-unsigned.ipa](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-unsigned.ipa) | Unsigned build: sign it on the iPhone with iLoader + SideStore (see below) |
 
 All builds are attached to [Releases](https://github.com/chickendqwd/Spent_Tracker/releases). The APK is signed with the development key, which is fine for testing but means a build produced on another machine cannot be installed over it.
@@ -115,10 +125,10 @@ Note: reinstalling (uninstall then install) clears the local Hive data; an upgra
 
 ```bash
 flutter analyze   # static analysis
-flutter test      # 27 tests: 17 logic/repository tests, 8 UI interaction tests, 2 appearance persistence tests
+flutter test      # 46 tests: 27 logic/repository tests, 17 UI interaction tests, 2 appearance persistence tests
 ```
 
-Current status: `flutter analyze` reports no issues; `flutter test` passes 27/27. `flutter build windows --debug` also succeeds, which confirms the native file-picker plugin compiles.
+Current status: `flutter analyze` reports no issues; `flutter test` passes 46/46. `flutter build windows --debug` also succeeds, which confirms the native file-picker plugin compiles.
 
 ## Money and exchange rates
 
@@ -137,6 +147,7 @@ Current status: `flutter analyze` reports no issues; `flutter test` passes 27/27
 | `v2.2` | Annual report: 12-month bars, key stats, category ranking |
 | `v3.0` | Data import: CSV / JSON preview, deduplication, category name mapping |
 | `v3.1` | Faster import deduplication, expanded documentation |
+| `v3.2` | Trend ranges with step sampling, ~90 category icons plus custom input, month-end recurring dates, clearer amount validation |
 
 ## Known limitations
 

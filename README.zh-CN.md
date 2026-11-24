@@ -42,6 +42,14 @@
 - **分类映射**：按「类型 + 分类名」匹配现有分类，找不到的落为「未分类」
 - 入口：「设置 → 数据 → 数据导入」
 
+### v3.2 — 趋势区间、分类图标、日期修正
+- **趋势区间**：趋势卡可在「本周 / 本月 / 近 3 月 / 近 6 月 / 近 12 月」间切换；常用的三档常驻显示，长区间收在「更多…」菜单里，且该入口在任何档位下都不会消失
+- **按步长采样**：近 3 / 6 / 12 月按 5 / 10 / 15 天固定步长分桶（分别 18 / 18 / 24 个点），避免点数过多导致折线糊成一片；一次 O(n) 遍历完成累加，空区间保留 0
+- **分类图标**：emoji 选择器扩展到约 90 个并分组展示，也可以自己输入图标；按 Unicode 字素簇校验（1–2 个），组合 emoji（如一家三口）算 1 个，非法输入回退 📦
+- **周期月末日期**：每月 31 号的规则在短月份自动落到月末（4/30、2/28 或闰年 2/29）；每年 2/29 的规则在平年落到 2/28
+- **金额提示更明确**：录入面板区分「未填 / 格式非法 / 必须大于 0」，并随输入清除报错
+- 「设置 → 周期记账」内联说明月末规则；移除一个不再使用的 provider
+
 ## 技术栈
 
 | 用途 | 选型 |
@@ -74,14 +82,16 @@ test/
 ├── v2_repository_test.dart         # v2 预算/时间区间/周期规则/多货币换算
 ├── annual_summary_test.dart        # 年度聚合规则
 ├── import_test.dart                # 导入解析（CSV 引号/非法行/JSON）与去重、分类映射
-└── widget_test.dart                # UI 交互流（录入闭环、编辑确认、删除分类、月度总结、搜索、深色模式）
+├── trend_analytics_test.dart       # 趋势分桶：边界、连续性、步长采样、折算调用
+├── rule_and_icon_test.dart         # 周期规则月末夹取、分类图标校验
+└── widget_test.dart                # UI 交互流（录入闭环、编辑确认、删除分类、月度总结、搜索、深色模式、趋势区间）
 ```
 
 ## 下载
 
 | 平台 | 文件 | 安装方式 |
 |---|---|---|
-| 安卓 | [SpentTracker-3.1.0-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.1.0-android.apk)（arm64，18 MB） | 传到手机直接打开安装，按提示允许「安装未知来源应用」 |
+| 安卓 | [SpentTracker-3.2.0-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.2.0-android.apk)（arm64，19 MB） | 传到手机直接打开安装，按提示允许「安装未知来源应用」 |
 | iOS | [SpentTracker-unsigned.ipa](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-unsigned.ipa) | 未签名包，需用 iLoader + SideStore 在手机上签名（见下文） |
 
 所有安装包都挂在 [Releases](https://github.com/chickendqwd/Spent_Tracker/releases)。APK 用开发密钥签名，适合测试；换一台机器重新构建的版本无法覆盖安装。
@@ -116,10 +126,10 @@ dart run build_runner build --delete-conflicting-outputs
 
 ```bash
 flutter analyze   # 静态检查
-flutter test      # 27 个测试：17 个逻辑/仓库单测 + 8 个 UI 交互测试 + 2 个外观持久化测试
+flutter test      # 46 个测试：27 个逻辑/仓库单测 + 17 个 UI 交互测试 + 2 个外观持久化测试
 ```
 
-当前状态：`flutter analyze` 无问题；`flutter test` 27/27 通过。
+当前状态：`flutter analyze` 无问题；`flutter test` 46/46 通过。
 
 ## 数据与汇率说明
 
@@ -138,6 +148,7 @@ flutter test      # 27 个测试：17 个逻辑/仓库单测 + 8 个 UI 交互�
 | `v2.2` | 年度报告（12 月柱状图、关键统计、分类排行） |
 | `v3.0` | 数据导入（CSV / JSON 预览、去重、分类名映射） |
 | `v3.1` | 导入去重性能优化、本文档补全 |
+| `v3.2` | 趋势区间与按步长采样、约 90 个分类图标与自定义输入、周期月末日期、金额提示更明确 |
 
 ## 已知限制
 
