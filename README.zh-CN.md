@@ -57,6 +57,11 @@
 - **符号统一**：预算页、超支提示、周期规则回退、旧的 `constants.currencySymbol` 里写死的 `S$` 全部改走基准币种，切换后不会残留在界面上
 - **预算沿用规则写明**：预算页顶部内联说明「当月未设置则沿用最近一个设过预算的月份，想不设限制请删除该月预算」
 
+### v3.3.1 — 趋势默认本周
+- **趋势卡默认打开「本周」**（不再默认近 6 月），打开就是本周逐日走势
+- **单字星期标签**：周视图下每个 X 轴刻度显示日期，并在日期下面多一行单字星期（一 / 二 / 三 / 四 / 五 / 六 / 日）；轴高度相应加高
+- **周视图不抽样**：7 天全部带标签（长区间仍保留抽样避免重叠），切到长区间后星期行自动消失
+
 ## 技术栈
 
 | 用途 | 选型 |
@@ -99,7 +104,7 @@ test/
 
 | 平台 | 文件 | 安装方式 |
 |---|---|---|
-| 安卓 | [SpentTracker-3.3.0-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.3.0-android.apk)（arm64，19 MB） | 传到手机直接打开安装，按提示允许「安装未知来源应用」 |
+| 安卓 | [SpentTracker-3.3.1-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.3.1-android.apk)（arm64，19 MB） | 传到手机直接打开安装，按提示允许「安装未知来源应用」 |
 | iOS | [SpentTracker-unsigned.ipa](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-unsigned.ipa) | 未签名包，需用 iLoader + SideStore 在手机上签名（见下文） |
 
 所有安装包都挂在 [Releases](https://github.com/chickendqwd/Spent_Tracker/releases)。APK 用开发密钥签名，适合测试；换一台机器重新构建的版本无法覆盖安装。
@@ -160,6 +165,7 @@ flutter test      # 58 个测试：38 个逻辑/仓库单测 + 18 个 UI 交互�
 | `v3.1` | 导入去重性能优化、本文档补全 |
 | `v3.2` | 趋势区间与按步长采样、约 90 个分类图标与自定义输入、周期月末日期、金额提示更明确 |
 | `v3.3` | 可切换基准币种与交叉汇率换算、JPY 预设与联网更新、币种符号统一、预算沿用规则写入界面 |
+| `v3.3.1` | 趋势默认本周，周视图日期下补单字星期 |
 
 ## 已知限制
 

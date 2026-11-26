@@ -29,4 +29,8 @@ class DateUtil {
 
   /// 月份标题：如 "2026年10月"
   static String monthTitle(DateTime d) => '${d.year}年${d.month}月';
+
+  /// 单字星期：周一→「一」…周日→「日」，用于趋势图逐日 X 轴的第二行标签。
+  static String weekdayChar(DateTime d) =>
+      const ['一', '二', '三', '四', '五', '六', '日'][d.weekday - 1];
 }

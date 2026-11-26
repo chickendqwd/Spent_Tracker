@@ -349,16 +349,41 @@ class _TrendCard extends ConsumerWidget {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 28,
+                        // 周视图两行标签（日期 + 单字星期），需要更多高度
+                        reservedSize: range == TrendRange.week ? 38 : 28,
                         getTitlesWidget: (v, meta) {
                           final i = v.round();
                           if (i < 0 || i >= trend.length) {
                             return const SizedBox.shrink();
                           }
-                          // 点数多时抽样显示标签，避免 X 轴文字重叠
-                          final every = (trend.length / 6).ceil();
+                          final isWeek = range == TrendRange.week;
+                          // 周视图每天都带标签；其余档位点数多，抽样显示避免重叠
+                          final every = isWeek ? 1 : (trend.length / 6).ceil();
                           if (i % every != 0 && i != trend.length - 1) {
                             return const SizedBox.shrink();
+                          }
+                          if (isWeek) {
+                            // 日期在上、星期在下（周一→「一」…周日→「日」）
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  trend[i].shortLabel,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: context.palette.muted,
+                                  ),
+                                ),
+                                Text(
+                                  DateUtil.weekdayChar(trend[i].start),
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    height: 1.1,
+                                    color: context.palette.muted,
+                                  ),
+                                ),
+                              ],
+                            );
                           }
                           return Text(
                             trend[i].shortLabel,

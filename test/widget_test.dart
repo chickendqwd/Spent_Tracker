@@ -310,12 +310,16 @@ void main() {
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
   });
 
-  testWidgets('趋势卡：区间平铺三项 + 更多菜单可选长区间', (tester) async {
+  testWidgets('趋势卡：默认本周 + 单字星期标签，区间可切换', (tester) async {
     await pumpApp(tester);
 
-    // v3.2：本周 / 本月 / 近3月 平铺，长区间收进「更多…」
-    // 顶部时间筛选器同样有「本周 / 本月」，故这两项用 findsWidgets
+    // v3.3.1：默认档位是「本周」，X 轴在日期下多一行单字星期
+    // 顶部时间筛选器同样有「本周」，故用 findsWidgets
     expect(find.text('本周'), findsWidgets);
+    // 本周必定包含周一，故「一」一定出现在 X 轴上
+    expect(find.text('一'), findsWidgets);
+
+    // 本周 / 本月 / 近3月 平铺，长区间收进「更多…」
     expect(find.text('本月'), findsWidgets);
     expect(find.text('近3月'), findsOneWidget);
     expect(find.text('更多…'), findsOneWidget);
@@ -331,6 +335,8 @@ void main() {
     expect(find.text('近12月'), findsOneWidget);
     expect(find.text('近6月'), findsNothing);
     expect(find.text('更多…'), findsOneWidget);
+    // 切到长区间后不再显示单字星期
+    expect(find.text('一'), findsNothing);
   });
 
   testWidgets('货币页：JPY 预设已展示，SGD 为基准，非基准币种可设为基准', (tester) async {

@@ -56,6 +56,11 @@ A personal expense tracker for recording spending and income, with time-based an
 - **Symbol cleanup**: every hard-coded `S$` (budget page, over-budget hint, recurring-rule fallback, the old `constants.currencySymbol`) now resolves through the base currency, so switching the base never leaves a stale symbol on screen
 - **Budget rule spelled out**: Settings → Budgets now states in-line that a month without an explicit budget inherits the most recent month that has one, and that a month should have its budget deleted to mean "no limit"
 
+### v3.3.1 — Week-first trend chart
+- **The trend card now opens on "this week"** instead of the last 6 months, so the first thing you see is the current week day by day
+- **Day-of-week labels**: in the week view each X-axis tick shows the date with a second line underneath carrying the weekday character (一 / 二 / 三 / 四 / 五 / 六 / 日); the axis reserves extra height for it
+- **No label sampling in the week view**: all 7 days get a label (longer ranges keep the sampling that prevents overlap), and the weekday line disappears as soon as you switch to a longer range
+
 ## Tech stack
 
 | Purpose | Choice |
@@ -98,7 +103,7 @@ test/
 
 | Platform | File | Install |
 |---|---|---|
-| Android | [SpentTracker-3.3.0-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.3.0-android.apk) (arm64, 19 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
+| Android | [SpentTracker-3.3.1-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.3.1-android.apk) (arm64, 19 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
 | iOS | [SpentTracker-unsigned.ipa](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-unsigned.ipa) | Unsigned build: sign it on the iPhone with iLoader + SideStore (see below) |
 
 All builds are attached to [Releases](https://github.com/chickendqwd/Spent_Tracker/releases). The APK is signed with the development key, which is fine for testing but means a build produced on another machine cannot be installed over it.
@@ -159,6 +164,7 @@ Current status: `flutter analyze` reports no issues; `flutter test` passes 58/58
 | `v3.1` | Faster import deduplication, expanded documentation |
 | `v3.2` | Trend ranges with step sampling, ~90 category icons plus custom input, month-end recurring dates, clearer amount validation |
 | `v3.3` | Switchable base currency with cross-rate conversion, JPY preset and online update, unified currency symbols, budget inheritance rule stated in-line |
+| `v3.3.1` | Trend chart defaults to this week, with weekday characters under each date in the week view |
 
 ## Known limitations
 

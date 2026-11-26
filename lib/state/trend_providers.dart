@@ -4,10 +4,10 @@ import '../core/analytics/trend_analytics.dart';
 import 'currency_providers.dart';
 import 'transaction_providers.dart';
 
-/// 趋势图当前区间（v3.2）：默认近 6 月，与旧版默认一致。
+/// 趋势图当前区间：v3.3.1 起默认「本周」逐日，便于当周回顾。
 class TrendRangeNotifier extends Notifier<TrendRange> {
   @override
-  TrendRange build() => TrendRange.sixMonths;
+  TrendRange build() => TrendRange.week;
 
   void set(TrendRange value) => state = value;
 }
