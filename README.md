@@ -49,6 +49,13 @@ A personal expense tracker for recording spending and income, with time-based an
 - **Clearer amount validation**: the entry sheet now names the problem — empty, invalid format, or not greater than zero — and clears the error as you type
 - Settings → Recurring rules explains the month-end rule inline; a dead provider was removed
 
+### v3.3 — Switchable base currency and JPY
+- **Switchable base currency**: in Settings → Currency a non-base currency can be promoted to base. Aggregates (balance, trend, annual report, budgets, category shares, charts) and their symbols follow the new base; the transaction list and detail sheet keep each entry's own currency
+- **No data rewriting**: rates are still stored as "1 unit = ? SGD" (SGD stays the conversion anchor), budgets and entries keep their stored amounts; only display converts, using a cross rate through SGD: `amount × rate(c) / rate(base)`
+- **JPY added**: preset currency 日本円 with the ¥ symbol; CNY and JPY share the symbol, so the list distinguishes them by name (and code). Online update now covers CNY / MYR / JPY and tells you which codes fell back to the local rate
+- **Symbol cleanup**: every hard-coded `S$` (budget page, over-budget hint, recurring-rule fallback, the old `constants.currencySymbol`) now resolves through the base currency, so switching the base never leaves a stale symbol on screen
+- **Budget rule spelled out**: Settings → Budgets now states in-line that a month without an explicit budget inherits the most recent month that has one, and that a month should have its budget deleted to mean "no limit"
+
 ## Tech stack
 
 | Purpose | Choice |
@@ -83,14 +90,15 @@ test/
 ├── import_test.dart                # CSV/JSON parsing (quotes, invalid rows) and dedup / category mapping
 ├── trend_analytics_test.dart       # trend bucketing: boundaries, continuity, step sampling, conversion calls
 ├── rule_and_icon_test.dart         # month-end clamping for recurring rules, category icon validation
-└── widget_test.dart                # UI flows: entry, edit confirmation, category deletion, monthly summary, search, dark mode, trend ranges
+├── currency_base_test.dart         # base-currency cross rates, symbol fallback, setBase semantics, JPY seeding
+└── widget_test.dart                # UI flows: entry, edit confirmation, category deletion, monthly summary, search, dark mode, trend ranges, currency page
 ```
 
 ## Downloads
 
 | Platform | File | Install |
 |---|---|---|
-| Android | [SpentTracker-3.2.0-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.2.0-android.apk) (arm64, 19 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
+| Android | [SpentTracker-3.3.0-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.3.0-android.apk) (arm64, 19 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
 | iOS | [SpentTracker-unsigned.ipa](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-unsigned.ipa) | Unsigned build: sign it on the iPhone with iLoader + SideStore (see below) |
 
 All builds are attached to [Releases](https://github.com/chickendqwd/Spent_Tracker/releases). The APK is signed with the development key, which is fine for testing but means a build produced on another machine cannot be installed over it.
@@ -125,17 +133,19 @@ Note: reinstalling (uninstall then install) clears the local Hive data; an upgra
 
 ```bash
 flutter analyze   # static analysis
-flutter test      # 46 tests: 27 logic/repository tests, 17 UI interaction tests, 2 appearance persistence tests
+flutter test      # 58 tests: 38 logic/repository tests, 18 UI interaction tests, 2 appearance persistence tests
 ```
 
-Current status: `flutter analyze` reports no issues; `flutter test` passes 46/46. `flutter build windows --debug` also succeeds, which confirms the native file-picker plugin compiles.
+Current status: `flutter analyze` reports no issues; `flutter test` passes 58/58. `flutter build windows --debug` also succeeds, which confirms the native file-picker plugin compiles.
 
 ## Money and exchange rates
 
 - Amounts are always stored as **integer cents**
-- Base currency is **SGD**; presets are SGD (1.0), CNY (0.186), MYR (0.30)
-- A rate means "1 unit of this currency = ? SGD"; if the online update fails the app falls back to the manual rates and never blocks data entry
-- Budgets are monthly; a month without an explicit budget inherits the most recent month that has one
+- **SGD is the conversion anchor**: every rate means "1 unit of this currency = ? SGD", and SGD's rate is fixed at 1.0 (it cannot be edited)
+- The **base currency is selectable** (Settings → Currency). Presets: SGD (1.0), CNY (0.186), MYR (0.30), JPY (0.0086 — a placeholder, rely on online update or a manual value). Aggregates convert through SGD: `amount × rate(c) / rate(base)`
+- Budgets are stored in **SGD cents**; the budget page enters and shows them in the current base currency, converting on the way in and out, so switching the base never inflates or shrinks a budget
+- If the online update fails the app falls back to the manual rates and never blocks data entry
+- Budgets are monthly; a month without an explicit budget inherits the most recent month that has one (stated in-line on the budget page)
 
 ## Releases
 
@@ -148,6 +158,7 @@ Current status: `flutter analyze` reports no issues; `flutter test` passes 46/46
 | `v3.0` | Data import: CSV / JSON preview, deduplication, category name mapping |
 | `v3.1` | Faster import deduplication, expanded documentation |
 | `v3.2` | Trend ranges with step sampling, ~90 category icons plus custom input, month-end recurring dates, clearer amount validation |
+| `v3.3` | Switchable base currency with cross-rate conversion, JPY preset and online update, unified currency symbols, budget inheritance rule stated in-line |
 
 ## Known limitations
 

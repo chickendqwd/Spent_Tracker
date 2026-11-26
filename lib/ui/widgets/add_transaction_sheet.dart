@@ -88,8 +88,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     _date = seed == null
         ? DateTime.now()
         : DateUtil.fromDayKey(seed.date);
-    // 币种：编辑/预填沿用其币种；新增默认基准币种（SGD）
-    _currency = seed?.currency ?? 'SGD';
+    // 币种：编辑/预填沿用其币种；新增默认当前基准币种
+    _currency = seed?.currency ?? ref.read(baseCurrencyProvider).code;
   }
 
   @override
@@ -112,7 +112,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   /// 保存后将超出预算的轻提示文本；无则 null。读取保存前状态判断「将超出」。
   String? _overBudgetWarning(int cents) {
     final currencies = ref.read(currencyProvider);
-    final sgdCents = toBaseCents(currencies, cents, _currency);
+    final baseSymbol = ref.read(baseCurrencyProvider).symbol;
+    final baseCents = toBaseCents(currencies, cents, _currency);
     final catBudgets = ref.read(categoryBudgetProvider);
     final totalBudget = ref.read(totalBudgetProvider);
     final byCat = ref.read(thisMonthExpenseByCategoryProvider);
@@ -122,13 +123,17 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       final budget = catBudgets[_categoryId];
       if (budget != null) {
         final used = byCat[_categoryId] ?? 0;
-        if (used + sgdCents > budget.amount) {
-          return '本月该分类将超出预算（${MoneyUtil.format(budget.amount, symbol: 'S\$ ')}）';
+        final budgetBase = budgetCentsInBase(currencies, budget.amount);
+        if (used + baseCents > budgetBase) {
+          return '本月该分类将超出预算（${MoneyUtil.format(budgetBase, symbol: '$baseSymbol ')}）';
         }
       }
     }
-    if (totalBudget != null && monthExpense + sgdCents > totalBudget.amount) {
-      return '本月总支出将超出预算（${MoneyUtil.format(totalBudget.amount, symbol: 'S\$ ')}）';
+    if (totalBudget != null) {
+      final budgetBase = budgetCentsInBase(currencies, totalBudget.amount);
+      if (monthExpense + baseCents > budgetBase) {
+        return '本月总支出将超出预算（${MoneyUtil.format(budgetBase, symbol: '$baseSymbol ')}）';
+      }
     }
     return null;
   }
@@ -310,7 +315,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // 币种（v2）：默认基准 SGD，可切换
+                  // 币种（v3.3）：默认当前基准币种，可切换
                   DropdownButtonFormField<String>(
                     initialValue: _currency,
                     decoration: const InputDecoration(
@@ -325,8 +330,10 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                           child: Text('${c.symbol} ${c.name}'),
                         ),
                     ],
-                    onChanged: (v) =>
-                        setState(() => _currency = v ?? 'SGD'),
+                    onChanged: (v) => setState(
+                      () => _currency =
+                          v ?? ref.read(baseCurrencyProvider).code,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   // 第 2 步：分类（默认选中第一个）

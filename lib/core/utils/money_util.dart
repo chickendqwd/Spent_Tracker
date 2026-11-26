@@ -1,15 +1,14 @@
 import 'package:intl/intl.dart';
 
-import '../constants.dart';
-
 /// 金额工具：内部一律以整数「分」存储与计算，展示时转为带符号文本。
 class MoneyUtil {
   MoneyUtil._();
 
-  /// 分 → 展示文本，如 123450 → "¥1,234.50"
-  static String format(int cents, {String? symbol}) {
-    final s = symbol ?? AppConstants.currencySymbol;
-    return '$s${NumberFormat('#,##0.00').format(cents / 100)}';
+  /// 分 → 展示文本，如 123450 → "$1,234.50"。
+  /// 符号由调用方按币种传入（见 `symbolOf` / `baseCurrencyProvider`），不再有全局默认，
+  /// 避免基准币种切换后仍显示旧符号。
+  static String format(int cents, {required String symbol}) {
+    return '$symbol${NumberFormat('#,##0.00').format(cents / 100)}';
   }
 
   /// 用户输入（元，可含最多两位小数）→ 分。

@@ -50,6 +50,13 @@
 - **金额提示更明确**：录入面板区分「未填 / 格式非法 / 必须大于 0」，并随输入清除报错
 - 「设置 → 周期记账」内联说明月末规则；移除一个不再使用的 provider
 
+### v3.3 — 可切换基准币种与 JPY
+- **基准币种可切换**：「设置 → 货币与汇率」可把任意非基准币种设成基准。汇总（结余、趋势、年报、预算、分类占比、图表）与符号跟随新基准；明细与详情保留每笔账自己的币种
+- **不改写任何数据**：汇率仍存「1 单位本币 = ? SGD」（SGD 是换算锚点），预算与账目金额也不改写；只有展示层换算，走 SGD 交叉汇率 `金额 × rate(c) / rate(base)`
+- **新增 JPY**：预设「日元」，符号 ¥；人民币与日元符号相同，列表按名称（和代码）区分。联网更新覆盖 CNY / MYR / JPY，并提示哪些币种没取到、沿用了本地汇率
+- **符号统一**：预算页、超支提示、周期规则回退、旧的 `constants.currencySymbol` 里写死的 `S$` 全部改走基准币种，切换后不会残留在界面上
+- **预算沿用规则写明**：预算页顶部内联说明「当月未设置则沿用最近一个设过预算的月份，想不设限制请删除该月预算」
+
 ## 技术栈
 
 | 用途 | 选型 |
@@ -84,14 +91,15 @@ test/
 ├── import_test.dart                # 导入解析（CSV 引号/非法行/JSON）与去重、分类映射
 ├── trend_analytics_test.dart       # 趋势分桶：边界、连续性、步长采样、折算调用
 ├── rule_and_icon_test.dart         # 周期规则月末夹取、分类图标校验
-└── widget_test.dart                # UI 交互流（录入闭环、编辑确认、删除分类、月度总结、搜索、深色模式、趋势区间）
+├── currency_base_test.dart         # 基准币种交叉换算、符号回退、setBase 语义、JPY 种子
+└── widget_test.dart                # UI 交互流（录入闭环、编辑确认、删除分类、月度总结、搜索、深色模式、趋势区间、货币页）
 ```
 
 ## 下载
 
 | 平台 | 文件 | 安装方式 |
 |---|---|---|
-| 安卓 | [SpentTracker-3.2.0-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.2.0-android.apk)（arm64，19 MB） | 传到手机直接打开安装，按提示允许「安装未知来源应用」 |
+| 安卓 | [SpentTracker-3.3.0-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.3.0-android.apk)（arm64，19 MB） | 传到手机直接打开安装，按提示允许「安装未知来源应用」 |
 | iOS | [SpentTracker-unsigned.ipa](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-unsigned.ipa) | 未签名包，需用 iLoader + SideStore 在手机上签名（见下文） |
 
 所有安装包都挂在 [Releases](https://github.com/chickendqwd/Spent_Tracker/releases)。APK 用开发密钥签名，适合测试；换一台机器重新构建的版本无法覆盖安装。
@@ -126,17 +134,19 @@ dart run build_runner build --delete-conflicting-outputs
 
 ```bash
 flutter analyze   # 静态检查
-flutter test      # 46 个测试：27 个逻辑/仓库单测 + 17 个 UI 交互测试 + 2 个外观持久化测试
+flutter test      # 58 个测试：38 个逻辑/仓库单测 + 18 个 UI 交互测试 + 2 个外观持久化测试
 ```
 
-当前状态：`flutter analyze` 无问题；`flutter test` 46/46 通过。
+当前状态：`flutter analyze` 无问题；`flutter test` 58/58 通过。
 
 ## 数据与汇率说明
 
 - 金额一律以**整数分**存储
-- 基准币种为 **SGD**，预设币种：SGD（1.0）、CNY（0.186）、MYR（0.30）
-- 汇率含义为「1 单位本币 = ? SGD」；联网更新失败时自动回退到手动汇率，不阻塞记账
-- 预算按「月」记录；当月未设置时沿用最近一个设有预算的月份
+- **SGD 是换算锚点**：汇率含义为「1 单位本币 = ? SGD」，SGD 自身固定为 1.0（不可编辑）
+- **基准币种可选择**（设置 → 货币与汇率）。预设：SGD（1.0）、CNY（0.186）、MYR（0.30）、JPY（0.0086，占位值，以联网或手填为准）。汇总按 SGD 交叉换算：`金额 × rate(c) / rate(base)`
+- 预算以 **SGD 分**存储；预算页按当前基准币种录入与显示，进出都换算，切换基准不会让预算金额翻倍或缩水
+- 联网更新失败时自动回退到手动汇率，不阻塞记账
+- 预算按「月」记录；当月未设置时沿用最近一个设有预算的月份（预算页内已有说明）
 
 ## 版本
 
@@ -149,6 +159,7 @@ flutter test      # 46 个测试：27 个逻辑/仓库单测 + 17 个 UI 交互�
 | `v3.0` | 数据导入（CSV / JSON 预览、去重、分类名映射） |
 | `v3.1` | 导入去重性能优化、本文档补全 |
 | `v3.2` | 趋势区间与按步长采样、约 90 个分类图标与自定义输入、周期月末日期、金额提示更明确 |
+| `v3.3` | 可切换基准币种与交叉汇率换算、JPY 预设与联网更新、币种符号统一、预算沿用规则写入界面 |
 
 ## 已知限制
 

@@ -26,25 +26,29 @@ class CurrencyNotifier extends Notifier<List<Currency>> {
     return list.first;
   }
 
-  /// 修改某币种汇率（基准币种恒为 1）。
+  /// 修改某币种汇率（金额为「1 单位本币 = ? SGD」）。
   Future<void> updateRate(String code, double rate) =>
       const CurrencyRepository().updateRate(code, rate);
 
   /// 批量更新汇率（联网更新用）。
   Future<void> updateRates(Map<String, double> rates) =>
       const CurrencyRepository().updateRates(rates);
+
+  /// 切换基准币种：只改标记，不改任何汇率与历史数据。
+  Future<void> setBase(String code) =>
+      const CurrencyRepository().setBase(code);
 }
 
 final currencyProvider = NotifierProvider<CurrencyNotifier, List<Currency>>(
   CurrencyNotifier.new,
 );
 
-/// 基准币种（SGD）。
+/// 基准币种（默认 SGD，可在货币页切换）。
 final baseCurrencyProvider = Provider<Currency>((ref) {
   return ref.watch(currencyProvider.notifier).base;
 });
 
-/// 某币种对基准币种的汇率（缺失时按 1 处理）。
+/// 某币种对 SGD 的汇率（缺失时按 1 处理）。
 double rateOf(List<Currency> currencies, String code) {
   for (final c in currencies) {
     if (c.code == code) return c.rateToSgd;
@@ -52,18 +56,46 @@ double rateOf(List<Currency> currencies, String code) {
   return 1.0;
 }
 
-/// 某币种的展示符号；币种缺失时回退到基准币种符号 SGD。
+/// 当前基准币种的 code（无 isBase 标记时回退列表首个）。
+String baseCodeOf(List<Currency> currencies) {
+  for (final c in currencies) {
+    if (c.isBase) return c.code;
+  }
+  return currencies.isEmpty ? 'SGD' : currencies.first.code;
+}
+
+/// 基准币种自身对 SGD 的汇率（基准为 SGD 时即 1）。
+double baseRateOf(List<Currency> currencies) =>
+    rateOf(currencies, baseCodeOf(currencies));
+
+/// 「1 单位 code = ? 基准币种」，用于货币页展示与录入。
+double rateToBaseOf(List<Currency> currencies, String code) {
+  final baseRate = baseRateOf(currencies);
+  if (baseRate <= 0) return 1.0;
+  return rateOf(currencies, code) / baseRate;
+}
+
+/// 某币种的展示符号；币种缺失时回退到当前基准币种符号。
 String symbolOf(List<Currency> currencies, String code) {
   for (final c in currencies) {
     if (c.code == code) return c.symbol;
   }
+  final baseCode = baseCodeOf(currencies);
+  for (final c in currencies) {
+    if (c.code == baseCode) return c.symbol;
+  }
   return 'S\$';
 }
 
-/// 把「某币种金额（分）」换算为「基准币种金额（分）」，四舍五入。
-/// 币种缺失或为基准币种时原样返回。
+/// 把「某币种金额（分）」换算为「当前基准币种金额（分）」，四舍五入。
+///
+/// 以 SGD 为中间货币交叉换算：amount × rate(code) / rate(base)。
+/// 基准为 SGD 时退化为 amount × rate(code)，与 v2 口径一致。
 int toBaseCents(List<Currency> currencies, int amount, String currencyCode) {
-  final c = rateOf(currencies, currencyCode);
-  if (c == 1.0 || currencyCode.isEmpty) return amount;
-  return (amount * c).round();
+  if (currencyCode.isEmpty) return amount;
+  if (currencyCode == baseCodeOf(currencies)) return amount;
+  final rate = rateOf(currencies, currencyCode);
+  final baseRate = baseRateOf(currencies);
+  if (rate <= 0 || baseRate <= 0) return amount;
+  return (amount * rate / baseRate).round();
 }

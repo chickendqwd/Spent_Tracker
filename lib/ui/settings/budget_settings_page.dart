@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/money_util.dart';
 import '../../data/models/budget.dart';
 import '../../data/models/category.dart';
+import '../../data/models/currency.dart';
 import '../../state/budget_providers.dart';
 import '../../state/category_providers.dart';
+import '../../state/currency_providers.dart';
 
 /// 预算设置页（v2）：管理月度总预算与分类预算。
 /// 按「月」记录，页面只编辑当前月预算；删除需二次确认。
@@ -19,6 +21,8 @@ class BudgetSettingsPage extends ConsumerWidget {
     final categories = ref.watch(categoryProvider);
     final categoryByKey = {for (final c in categories) c.key as int: c};
     final month = ref.watch(budgetMonthProvider);
+    final currencies = ref.watch(currencyProvider);
+    final base = ref.watch(baseCurrencyProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('预算设置')),
@@ -26,6 +30,13 @@ class BudgetSettingsPage extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
           Text('当前月：$month', style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 4),
+          Text(
+            '金额按当前基准币种（${base.name}）录入与显示。'
+            '当月未设置预算时，自动沿用最近一个设置过预算的月份；'
+            '想要「不设限制」请删除该月预算。',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           const SizedBox(height: 8),
           if (budgets.isEmpty)
             const Padding(
@@ -37,6 +48,9 @@ class BudgetSettingsPage extends ConsumerWidget {
               _BudgetTile(
                 budget: b,
                 categoryByKey: categoryByKey,
+                currencies: currencies,
+                symbol: base.symbol,
+                baseCode: base.code,
               ),
         ],
       ),
@@ -49,9 +63,15 @@ class BudgetSettingsPage extends ConsumerWidget {
   }
 
   Future<void> _add(BuildContext context, WidgetRef ref) async {
+    final currencies = ref.read(currencyProvider);
+    final base = ref.read(baseCurrencyProvider);
     final result = await showDialog<_BudgetFormResult>(
       context: context,
-      builder: (_) => _BudgetDialog(categories: ref.read(categoryProvider)),
+      builder: (_) => _BudgetDialog(
+        categories: ref.read(categoryProvider),
+        symbol: base.symbol,
+        baseCode: base.code,
+      ),
     );
     if (result == null || !context.mounted) return;
     final month = ref.read(budgetMonthProvider);
@@ -62,7 +82,8 @@ class BudgetSettingsPage extends ConsumerWidget {
                 ? result.categoryId
                 : null,
             month: month,
-            amount: result.amountCents,
+            // 录入按当前基准币种，存储统一折算回 SGD 分
+            amount: budgetCentsToSgd(currencies, result.amountCents),
           ),
         );
   }
@@ -75,10 +96,19 @@ final budgetMonthProvider = Provider<String>((ref) {
 });
 
 class _BudgetTile extends ConsumerWidget {
-  const _BudgetTile({required this.budget, required this.categoryByKey});
+  const _BudgetTile({
+    required this.budget,
+    required this.categoryByKey,
+    required this.currencies,
+    required this.symbol,
+    required this.baseCode,
+  });
 
   final Budget budget;
   final Map<int, Category> categoryByKey;
+  final List<Currency> currencies;
+  final String symbol;
+  final String baseCode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -86,6 +116,8 @@ class _BudgetTile extends ConsumerWidget {
     final label = isTotal
         ? '总预算'
         : '分类预算 · ${budget.categoryId == null ? '未分类' : (categoryByKey[budget.categoryId]?.name ?? '未知')}';
+    // 存储是 SGD 分，展示按当前基准币种换算
+    final amountInBase = budgetCentsInBase(currencies, budget.amount);
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -99,7 +131,7 @@ class _BudgetTile extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              MoneyUtil.format(budget.amount, symbol: 'S\$ '),
+              MoneyUtil.format(amountInBase, symbol: '$symbol '),
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 4),
@@ -120,12 +152,15 @@ class _BudgetTile extends ConsumerWidget {
   }
 
   Future<void> _edit(BuildContext context, WidgetRef ref) async {
+    final amountInBase = budgetCentsInBase(currencies, budget.amount);
     final result = await showDialog<_BudgetFormResult>(
       context: context,
       builder: (_) => _BudgetDialog(
         categories: ref.read(categoryProvider),
+        symbol: symbol,
+        baseCode: baseCode,
         initialType: budget.budgetType,
-        initialAmount: MoneyUtil.inputText(budget.amount),
+        initialAmount: MoneyUtil.inputText(amountInBase),
         initialCategoryId: budget.categoryId,
       ),
     );
@@ -134,7 +169,7 @@ class _BudgetTile extends ConsumerWidget {
     budget.categoryId = result.type == BudgetType.category
         ? result.categoryId
         : null;
-    budget.amount = result.amountCents;
+    budget.amount = budgetCentsToSgd(currencies, result.amountCents);
     await ref.read(budgetProvider.notifier).update(budget);
   }
 
@@ -179,12 +214,18 @@ class _BudgetFormResult {
 class _BudgetDialog extends StatefulWidget {
   const _BudgetDialog({
     required this.categories,
+    required this.symbol,
+    required this.baseCode,
     this.initialType = BudgetType.total,
     this.initialAmount,
     this.initialCategoryId,
   });
 
   final List<Category> categories;
+
+  /// 当前基准币种的符号与代码，金额按基准币种录入
+  final String symbol;
+  final String baseCode;
   final BudgetType initialType;
   final String? initialAmount;
   final int? initialCategoryId;
@@ -254,10 +295,10 @@ class _BudgetDialogState extends State<_BudgetDialog> {
                       _amountFormat.hasMatch(newValue.text) ? newValue : oldValue,
                 ),
               ],
-              decoration: const InputDecoration(
-                labelText: '金额（SGD）',
-                prefixText: 'S\$ ',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: '金额（${widget.baseCode}）',
+                prefixText: '${widget.symbol} ',
+                border: const OutlineInputBorder(),
               ),
             ),
             if (_type == BudgetType.category) ...[

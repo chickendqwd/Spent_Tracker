@@ -53,7 +53,8 @@ void main() {
 
     // 预设分类与预设币种已写入数据库
     expect(Db.categories.length, 13);
-    expect(Db.currencies.length, 3);
+    // SGD / CNY / MYR / JPY（v3.3 新增 JPY）
+    expect(Db.currencies.length, 4);
   });
 
   testWidgets('录入闭环：记一笔支出后总览与明细同步更新', (tester) async {
@@ -330,6 +331,29 @@ void main() {
     expect(find.text('近12月'), findsOneWidget);
     expect(find.text('近6月'), findsNothing);
     expect(find.text('更多…'), findsOneWidget);
+  });
+
+  testWidgets('货币页：JPY 预设已展示，SGD 为基准，非基准币种可设为基准', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('货币与汇率'));
+    await tester.pumpAndSettle();
+
+    // JPY 预设已存在；CNY 与 JPY 符号同为 ¥，靠名称区分
+    expect(find.textContaining('日元 (JPY)'), findsOneWidget);
+    expect(find.textContaining('人民币 (CNY)'), findsOneWidget);
+
+    // 基准标记只出现在 SGD 上，其余三个币种各有操作菜单
+    expect(find.text('基准'), findsOneWidget);
+    expect(find.byType(PopupMenuButton<String>), findsNWidgets(3));
+
+    // 菜单里提供「修改汇率」与「设为基准币种」
+    await tester.tap(find.byType(PopupMenuButton<String>).first);
+    await tester.pumpAndSettle();
+    expect(find.text('修改汇率'), findsOneWidget);
+    expect(find.text('设为基准币种'), findsOneWidget);
   });
 
   // 持久化属于真实 I/O，单独用真实异步验证（FakeAsync 下 Hive 写入不推进）

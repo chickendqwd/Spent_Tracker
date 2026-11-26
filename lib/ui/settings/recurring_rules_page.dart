@@ -49,7 +49,8 @@ class RecurringRulesPage extends ConsumerWidget {
                 categoryName: r.categoryId == null
                     ? '未分类'
                     : (categoryByKey[r.categoryId]?.name ?? '未分类'),
-                symbol: currencyByCode[r.currency]?.symbol ?? 'S\$',
+                symbol: currencyByCode[r.currency]?.symbol ??
+                    symbolOf(currencies, r.currency),
               ),
         ],
       ),
@@ -67,6 +68,7 @@ class RecurringRulesPage extends ConsumerWidget {
       builder: (_) => _RuleDialog(
         categories: ref.read(categoryProvider),
         currencies: ref.read(currencyProvider),
+        initialCurrency: ref.read(baseCurrencyProvider).code,
       ),
     );
     if (result == null || !context.mounted) return;

@@ -236,7 +236,8 @@ class _MonthlyBarCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(left: 8),
               child: Text(
-                '月度收支',
+                // C10：柱状图 X 轴只有月份数字，标题里补上所属年份
+                '月度收支（${summary.year} 年）',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),

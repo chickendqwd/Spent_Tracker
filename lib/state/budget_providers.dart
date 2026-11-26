@@ -5,6 +5,7 @@ import '../core/utils/date_util.dart';
 import '../data/db/budget_repository.dart';
 import '../data/db/database.dart';
 import '../data/models/budget.dart';
+import '../data/models/currency.dart';
 import '../data/models/transaction_type.dart';
 import 'currency_providers.dart';
 import 'transaction_providers.dart';
@@ -40,6 +41,18 @@ final effectiveBudgetsProvider = Provider<List<Budget>>((ref) {
   return const BudgetRepository().effectiveForMonth(month);
 });
 
+/// 预算金额的存储口径是「SGD 分」（历史数据不改写）。
+/// 展示与超支比较前换算到当前基准币种；基准为 SGD 时原样返回。
+int budgetCentsInBase(List<Currency> currencies, int sgdCents) =>
+    toBaseCents(currencies, sgdCents, 'SGD');
+
+/// 录入预算时把「当前基准币种分」转回「SGD 分」存储。
+int budgetCentsToSgd(List<Currency> currencies, int baseCents) {
+  final baseRate = baseRateOf(currencies);
+  if (baseRate <= 0) return baseCents;
+  return (baseCents * baseRate).round();
+}
+
 /// 本月生效的总预算（可能为 null，表示未设置）。
 final totalBudgetProvider = Provider<Budget?>((ref) {
   final effective = ref.watch(effectiveBudgetsProvider);
@@ -59,7 +72,7 @@ final categoryBudgetProvider = Provider<Map<int, Budget>>((ref) {
   };
 });
 
-/// 本月支出总额（基准币种 SGD 分）。预算按「月」，进度条与超支判定均用本月口径。
+/// 本月支出总额（当前基准币种分）。预算按「月」，进度条与超支判定均用本月口径。
 final thisMonthExpenseProvider = Provider<int>((ref) {
   final transactions = ref.watch(transactionProvider);
   final currencies = ref.watch(currencyProvider);
@@ -73,7 +86,7 @@ final thisMonthExpenseProvider = Provider<int>((ref) {
   return expense;
 });
 
-/// 本月各分类支出（基准币种 SGD 分；key=-1 表示未分类）。
+/// 本月各分类支出（当前基准币种分；key=-1 表示未分类）。
 final thisMonthExpenseByCategoryProvider = Provider<Map<int, int>>((ref) {
   final transactions = ref.watch(transactionProvider);
   final currencies = ref.watch(currencyProvider);

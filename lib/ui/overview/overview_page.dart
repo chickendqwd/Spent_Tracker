@@ -37,6 +37,7 @@ class OverviewPage extends ConsumerWidget {
     final totalBudget = ref.watch(totalBudgetProvider);
     final thisMonthExpense = ref.watch(thisMonthExpenseProvider);
     final dueRules = ref.watch(todayDueRulesProvider);
+    final currencies = ref.watch(currencyProvider);
     final baseSymbol = ref.watch(baseCurrencyProvider).symbol;
 
     return Scaffold(
@@ -89,7 +90,8 @@ class OverviewPage extends ConsumerWidget {
           const SizedBox(height: 16),
           if (totalBudget != null) ...[
             _BudgetCard(
-              budgetAmount: totalBudget.amount,
+              // 预算存的是 SGD 分，展示与已用金额统一换算到当前基准币种
+              budgetAmount: budgetCentsInBase(currencies, totalBudget.amount),
               used: thisMonthExpense,
               symbol: baseSymbol,
             ),

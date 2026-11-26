@@ -83,7 +83,7 @@ class SettingsPage extends StatelessWidget {
           _EntryTile(
             icon: Icons.currency_exchange,
             title: '货币与汇率',
-            subtitle: '基准 SGD，可手动或联网更新',
+            subtitle: '切换基准币种，汇率可手动或联网更新',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const CurrencyPage()),
             ),

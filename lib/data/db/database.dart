@@ -30,13 +30,16 @@ class Db {
   static late Box<dynamic> settings;
 }
 
-/// 默认汇率（基准 SGD；SGD 自身 rate=1）。这些是手动默认值，可在「设置→货币与汇率」修改或联网更新。
+/// 默认汇率（锚点为 SGD；SGD 自身 rate=1）。这些是手动默认值，可在「设置→货币与汇率」修改或联网更新。
+/// 基准币种可由用户在货币页切换，切换只改 isBase 标记，不动这里的汇率。
 class PresetCurrencies {
   static const List<({String code, String name, String symbol, double rate})>
       data = [
     (code: 'SGD', name: '新加坡元', symbol: 'S\$', rate: 1.0),
     (code: 'CNY', name: '人民币', symbol: '¥', rate: 0.186),
     (code: 'MYR', name: '马来西亚林吉特', symbol: 'RM', rate: 0.30),
+    // JPY 的默认值只是量级占位（约 1 日元 ≈ 0.0086 新元），以联网或手填为准
+    (code: 'JPY', name: '日元', symbol: '¥', rate: 0.0086),
   ];
 }
 

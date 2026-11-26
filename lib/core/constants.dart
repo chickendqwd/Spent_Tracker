@@ -6,11 +6,6 @@ class AppConstants {
 
   static const String appName = 'Spent_Tracker';
 
-  /// v1 固定一种币种：金额以「分」为单位存储，展示时使用该符号。
-  /// 多币种为 v2 范围，不要在此之外引入币种概念。
-  /// 如需更换符号，仅需修改此处。
-  static const String currencySymbol = '¥';
-
   /// 支出金额列表前缀
   static const String expensePrefix = '-';
 
