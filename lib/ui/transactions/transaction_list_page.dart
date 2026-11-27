@@ -12,6 +12,7 @@ import '../../state/category_providers.dart';
 import '../../state/currency_providers.dart';
 import '../../state/transaction_providers.dart';
 import '../../state/time_range_providers.dart';
+import '../widgets/surfaces.dart';
 import '../widgets/transaction_detail_sheet.dart';
 import '../widgets/transaction_tile.dart';
 import '../widgets/time_range_selector.dart';
@@ -50,6 +51,7 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final palette = context.palette;
     final transactions = ref.watch(transactionProvider);
     final categories = ref.watch(categoryProvider);
     final currencies = ref.watch(currencyProvider);
@@ -89,116 +91,263 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
         })
         .toList(growable: false);
 
+    final groups = _grouped(filtered);
+    final totalExpense = filtered
+        .where((t) => t.type == 0)
+        .fold<int>(0, (sum, t) => sum + t.amount);
+    final totalIncome = filtered
+        .where((t) => t.type == 1)
+        .fold<int>(0, (sum, t) => sum + t.amount);
+    final baseSymbol = ref.watch(baseCurrencyProvider).symbol;
+
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.transactionsTitle)),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: l10n.transactionsSearchHint,
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _query.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _query = '');
-                        },
-                      ),
-                border: const OutlineInputBorder(),
-                isDense: true,
-              ),
-              onChanged: (v) => setState(() => _query = v),
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TimeRangeSelector(),
-          ),
-          // 筛选栏：类型 + 分类
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Row(
-              children: [
-                SegmentedButton<int?>(
-                  showSelectedIcon: false,
-                  style: const ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  segments: [
-                    ButtonSegment(value: null, label: Text(l10n.transactionsAll)),
-                    ButtonSegment(value: 0, label: Text(l10n.typeExpense)),
-                    ButtonSegment(value: 1, label: Text(l10n.typeIncome)),
-                  ],
-                  selected: {_typeFilter},
-                  onSelectionChanged: (s) => setState(() {
-                    _typeFilter = s.first;
-                    _categoryFilter = null;
-                  }),
-                ),
-                const Spacer(),
-                DropdownButton<int?>(
-                  value: _categoryFilter,
-                  hint: Text(l10n.transactionsAllCategories),
-                  items: [
-                    DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text(l10n.transactionsAllCategories),
-                    ),
-                    for (final c in filterableCategories)
-                      DropdownMenuItem<int?>(
-                        value: c.key as int,
-                        child: Text(
-                          '${c.displayIcon} ${categoryDisplayName(l10n, c)}',
+      appBar: AppBar(title: SectionTitle(l10n.transactionsTitle)),
+      body: AppBackground(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: l10n.transactionsSearchHint,
+                  prefixIcon: const Icon(Icons.search, size: 19),
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _query = '');
+                          },
                         ),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() => _categoryFilter = v),
+                  isDense: true,
                 ),
-              ],
+                onChanged: (v) => setState(() => _query = v),
+              ),
             ),
-          ),
-          const Divider(height: 1),
-          // 列表：按日期分组
-          Expanded(
-            child: filtered.isEmpty
-                ? Center(child: Text(l10n.transactionsNoMatch))
-                : ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 96),
-                    itemCount: _grouped(filtered).length,
-                    itemBuilder: (context, i) {
-                      final (header, items) = _grouped(filtered)[i];
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                            child: Text(
-                              header,
-                              style: Theme.of(context).textTheme.labelMedium
-                                  ?.copyWith(color: context.palette.muted),
-                            ),
-                          ),
-                          for (final t in items)
-                            TransactionTile(
-                              transaction: t,
-                              category: t.categoryId == null
-                                  ? null
-                                  : categoryByKey[t.categoryId],
-                              onTap: () =>
-                                  TransactionDetailSheet.show(context, t),
-                            ),
-                        ],
-                      );
-                    },
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: TimeRangeSelector(),
+            ),
+            // 筛选栏：类型胶囊 + 分类下拉
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 12, 2),
+              child: Row(
+                children: [
+                  PillChip(
+                    label: l10n.transactionsAll,
+                    selected: _typeFilter == null,
+                    onTap: () => setState(() {
+                      _typeFilter = null;
+                      _categoryFilter = null;
+                    }),
                   ),
-          ),
-        ],
+                  const SizedBox(width: 6),
+                  PillChip(
+                    label: l10n.typeExpense,
+                    selected: _typeFilter == 0,
+                    onTap: () => setState(() {
+                      _typeFilter = 0;
+                      _categoryFilter = null;
+                    }),
+                  ),
+                  const SizedBox(width: 6),
+                  PillChip(
+                    label: l10n.typeIncome,
+                    selected: _typeFilter == 1,
+                    onTap: () => setState(() {
+                      _typeFilter = 1;
+                      _categoryFilter = null;
+                    }),
+                  ),
+                  const Spacer(),
+                  PopupMenuButton<int?>(
+                    tooltip: l10n.transactionsAllCategories,
+                    initialValue: _categoryFilter,
+                    color: palette.card,
+                    onSelected: (v) => setState(() => _categoryFilter = v),
+                    itemBuilder: (_) => [
+                      PopupMenuItem<int?>(
+                        value: null,
+                        child: Text(l10n.transactionsAllCategories),
+                      ),
+                      for (final c in filterableCategories)
+                        PopupMenuItem<int?>(
+                          value: c.key as int,
+                          child: Text(
+                            '${c.displayIcon} ${categoryDisplayName(l10n, c)}',
+                          ),
+                        ),
+                    ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _categoryFilter == null
+                              ? l10n.transactionsAllCategories
+                              : categoryDisplayName(
+                                  l10n,
+                                  categoryByKey[_categoryFilter],
+                                ),
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: _categoryFilter == null
+                                ? palette.muted
+                                : palette.ink,
+                          ),
+                        ),
+                        Icon(
+                          Icons.expand_more,
+                          size: 16,
+                          color: palette.muted,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: filtered.isEmpty
+                  ? Center(
+                      child: Text(
+                        l10n.transactionsNoMatch,
+                        style: TextStyle(fontSize: 13, color: palette.muted),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 96),
+                      itemCount: groups.length + 1,
+                      itemBuilder: (context, i) {
+                        // 首项：区间合计条
+                        if (i == 0) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6, bottom: 4),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.receipt_long_outlined,
+                                  size: 14,
+                                  color: palette.muted,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${filtered.length}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: palette.primaryDeep,
+                                  ),
+                                ),
+                                const Spacer(),
+                                // 只有一条记录时金额已在下方条目里，避免重复展示
+                                if (filtered.length > 1) ...[
+                                  Text(
+                                    '-${MoneyUtil.format(totalExpense, symbol: baseSymbol)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: palette.expense,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    '+${MoneyUtil.format(totalIncome, symbol: baseSymbol)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: palette.income,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        }
+                        final (header, items, dayNet) = groups[i - 1];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      header,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.4,
+                                        color: palette.muted,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const Spacer(),
+                                    // 单条记录不重复显示当日净额
+                                    if (items.length > 1)
+                                      Text(
+                                        dayNet >= 0
+                                            ? '+${MoneyUtil.format(dayNet, symbol: baseSymbol)}'
+                                            : '-${MoneyUtil.format(-dayNet, symbol: baseSymbol)}',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: dayNet >= 0
+                                              ? palette.income
+                                              : palette.expense,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              SlantCard(
+                                padding: const EdgeInsets.fromLTRB(
+                                  14,
+                                  2,
+                                  8,
+                                  2,
+                                ),
+                                child: Column(
+                                  children: [
+                                    for (final (idx, t) in items.indexed) ...[
+                                      TransactionTile(
+                                        transaction: t,
+                                        category: t.categoryId == null
+                                            ? null
+                                            : categoryByKey[t.categoryId],
+                                        onTap: () =>
+                                            TransactionDetailSheet.show(
+                                              context,
+                                              t,
+                                            ),
+                                      ),
+                                      if (idx != items.length - 1)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            right: 6,
+                                          ),
+                                          child: Container(
+                                            height: 1,
+                                            color: palette.divider,
+                                          ),
+                                        ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -232,22 +381,24 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
         (queryCents != null && t.amount == queryCents);
   }
 
-  /// 按日期（倒序）分组：返回 [(表头, 账目列表)]
-  List<(String, List<Transaction>)> _grouped(List<Transaction> list) {
+  /// 按日期（倒序）分组：返回 [(表头, 账目列表, 当日净额)]
+  List<(String, List<Transaction>, int)> _grouped(List<Transaction> list) {
     final l10n = context.l10n;
-    final result = <(String, List<Transaction>)>[];
+    final result = <(String, List<Transaction>, int)>[];
     String? currentKey;
-    List<Transaction>? currentItems;
     for (final t in list) {
+      final delta = t.type == 0 ? -t.amount : t.amount;
       if (t.date != currentKey) {
         currentKey = t.date;
-        currentItems = [];
         result.add((
           l10n.dateHeader(DateUtil.fromDayKey(t.date)),
-          currentItems,
+          <Transaction>[t],
+          delta,
         ));
+      } else {
+        final last = result.removeLast();
+        result.add((last.$1, [...last.$2, t], last.$3 + delta));
       }
-      currentItems!.add(t);
     }
     return result;
   }

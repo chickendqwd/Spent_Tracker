@@ -8,6 +8,7 @@ import '../../core/analytics/trend_analytics.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_util.dart';
 import '../../core/utils/money_util.dart';
+import '../../data/models/category.dart';
 import '../../data/models/recurring_rule.dart';
 import '../../data/models/transaction.dart';
 import '../../l10n/l10n.dart';
@@ -20,13 +21,14 @@ import '../../state/trend_providers.dart';
 import '../analysis/annual_page.dart';
 import '../transactions/transaction_list_page.dart';
 import '../widgets/add_transaction_sheet.dart';
+import '../widgets/surfaces.dart';
 import '../widgets/time_range_selector.dart';
 import '../widgets/transaction_detail_sheet.dart';
 import '../widgets/transaction_tile.dart';
 
-/// 总览页（v2）：
-/// 时间范围切换 → 今日待记提示条 → 总账三卡片 → 本月预算进度条
-/// → 收支趋势折线图 → 分类分析（环形图+排行） → 最近记录。
+/// 总览页（UI 重构）：
+/// 时间范围切换 → 今日待记提示 → 结余主卡（支出/收入两格）
+/// → 本月预算 → 收支趋势 → 分类分析 → 最近记录。
 class OverviewPage extends ConsumerWidget {
   const OverviewPage({super.key});
 
@@ -45,7 +47,7 @@ class OverviewPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.overviewTitle),
+        title: SectionTitle(l10n.overviewTitle),
         actions: [
           IconButton(
             tooltip: l10n.overviewAnnualTooltip,
@@ -54,103 +56,49 @@ class OverviewPage extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const AnnualPage()),
             ),
           ),
+          const SizedBox(width: 4),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-        children: [
-          const TimeRangeSelector(),
-          if (dueRules.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _TodayDueBanner(rules: dueRules),
-          ],
-          const SizedBox(height: 12),
-          // 总账三卡片（所选区间，基准币种）
-          Row(
-            children: [
-              _StatCard(
-                label: l10n.overviewTotalExpense,
-                amount: summary.totalExpense,
-                color: context.palette.expense,
-                symbol: baseSymbol,
-              ),
-              const SizedBox(width: 10),
-              _StatCard(
-                label: l10n.overviewTotalIncome,
-                amount: summary.totalIncome,
-                color: context.palette.income,
-                symbol: baseSymbol,
-              ),
-              const SizedBox(width: 10),
-              _StatCard(
-                label: l10n.overviewBalance,
-                amount: summary.balance,
-                color: Theme.of(context).colorScheme.onSurface,
+      body: AppBackground(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+          children: [
+            const TimeRangeSelector(),
+            if (dueRules.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _TodayDueBanner(rules: dueRules),
+            ],
+            const SizedBox(height: 14),
+            _BalanceCard(
+              balance: summary.balance,
+              expense: summary.totalExpense,
+              income: summary.totalIncome,
+              symbol: baseSymbol,
+            ),
+            if (totalBudget != null) ...[
+              const SizedBox(height: 14),
+              _BudgetCard(
+                // 预算按自身币种存储，展示前换算到当前基准币种
+                budgetAmount: budgetCentsInBase(
+                  currencies,
+                  totalBudget.amount,
+                  totalBudget.currencyCode,
+                ),
+                used: thisMonthExpense,
                 symbol: baseSymbol,
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          if (totalBudget != null) ...[
-            _BudgetCard(
-              // 预算按自身币种存储，展示前换算到当前基准币种
-              budgetAmount: budgetCentsInBase(
-                currencies,
-                totalBudget.amount,
-                totalBudget.currencyCode,
-              ),
-              used: thisMonthExpense,
-              symbol: baseSymbol,
+            const SizedBox(height: 14),
+            _TrendCard(symbol: baseSymbol),
+            const SizedBox(height: 14),
+            _CategoryAnalysisCard(summary: summary, symbol: baseSymbol),
+            const SizedBox(height: 14),
+            _RecentCard(
+              recent: recent,
+              categoryByKey: categoryByKey,
             ),
-            const SizedBox(height: 16),
           ],
-          _TrendCard(symbol: baseSymbol),
-          const SizedBox(height: 16),
-          _CategoryAnalysisCard(summary: summary, symbol: baseSymbol),
-          const SizedBox(height: 16),
-          // 最近记录（所选区间）
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        l10n.overviewRecent,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const TransactionListPage(),
-                          ),
-                        ),
-                        child: Text(l10n.overviewViewAll),
-                      ),
-                    ],
-                  ),
-                  if (recent.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Center(child: Text(l10n.overviewRecentEmpty)),
-                    )
-                  else
-                    for (final t in recent)
-                      TransactionTile(
-                        transaction: t,
-                        category: t.categoryId == null
-                            ? null
-                            : categoryByKey[t.categoryId],
-                        onTap: () => TransactionDetailSheet.show(context, t),
-                      ),
-                ],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -165,94 +113,194 @@ class _TodayDueBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final first = rules.first;
-    return Card(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => AddTransactionSheet.show(
-          context,
-          prefill: Transaction(
-            type: first.type,
-            amount: first.amount,
-            categoryId: first.categoryId,
-            date: DateUtil.toDayKey(DateTime.now()),
-            note: first.note,
-            currency: first.currency,
-            createdAt: DateTime.now(),
-          ),
+    final palette = context.palette;
+
+    return SlantCard(
+      accentColor: palette.accent,
+      tint: true,
+      padding: const EdgeInsets.fromLTRB(18, 12, 12, 12),
+      onTap: () => AddTransactionSheet.show(
+        context,
+        prefill: Transaction(
+          type: first.type,
+          amount: first.amount,
+          categoryId: first.categoryId,
+          date: DateUtil.toDayKey(DateTime.now()),
+          note: first.note,
+          currency: first.currency,
+          createdAt: DateTime.now(),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              const Icon(Icons.event_available, size: 22),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  context.l10n.overviewTodayDue('${rules.length}'),
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: palette.accent.withValues(alpha: 0.16),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.event_available, size: 18, color: palette.accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              context.l10n.overviewTodayDue('${rules.length}'),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: palette.ink,
               ),
-              const Icon(Icons.chevron_right, size: 20),
-            ],
+            ),
           ),
-        ),
+          Icon(Icons.chevron_right, size: 18, color: palette.muted),
+          const SizedBox(width: 2),
+        ],
       ),
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.label,
-    required this.amount,
-    required this.color,
+/// 结余主卡：大号结余数字为全页第一焦点，下方并排支出 / 收入。
+class _BalanceCard extends StatelessWidget {
+  const _BalanceCard({
+    required this.balance,
+    required this.expense,
+    required this.income,
     required this.symbol,
   });
 
-  final String label;
-  final int amount;
-  final Color color;
+  final int balance;
+  final int expense;
+  final int income;
   final String symbol;
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Expanded(
-      child: Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final palette = context.palette;
+    final l10n = context.l10n;
+
+    return SlantCard(
+      tint: true,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text(
-                label,
-                style: textTheme.bodySmall?.copyWith(color: context.palette.muted),
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: palette.primary,
+                  shape: BoxShape.circle,
+                ),
               ),
-              const SizedBox(height: 6),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  MoneyUtil.format(amount, symbol: symbol),
-                  style: textTheme.titleMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                  ),
+              const SizedBox(width: 6),
+              Text(
+                l10n.overviewBalance,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: palette.primaryDeep,
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              MoneyUtil.format(balance, symbol: symbol),
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.8,
+                height: 1.1,
+                color: palette.ink,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(height: 1, color: palette.divider),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _MiniStat(
+                  label: l10n.overviewTotalExpense,
+                  amount: expense,
+                  symbol: symbol,
+                  color: palette.expense,
+                ),
+              ),
+              Container(width: 1, height: 30, color: palette.divider),
+              const SizedBox(width: 14),
+              Expanded(
+                child: _MiniStat(
+                  label: l10n.overviewTotalIncome,
+                  amount: income,
+                  symbol: symbol,
+                  color: palette.income,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-/// 本月预算进度条：已用 / 总额；超支标红。
+class _MiniStat extends StatelessWidget {
+  const _MiniStat({
+    required this.label,
+    required this.amount,
+    required this.symbol,
+    required this.color,
+  });
+
+  final String label;
+  final int amount;
+  final String symbol;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: palette.muted,
+          ),
+        ),
+        const SizedBox(height: 4),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            MoneyUtil.format(amount, symbol: symbol),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 本月预算：已用 / 总额进度条；超支标红。
 class _BudgetCard extends StatelessWidget {
   const _BudgetCard({
     required this.budgetAmount,
@@ -266,57 +314,57 @@ class _BudgetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final over = used > budgetAmount;
-    final progress = budgetAmount <= 0 ? 0.0 : (used / budgetAmount).clamp(0.0, 1.0);
-    final color = over ? context.palette.expense : Theme.of(context).colorScheme.primary;
+    final progress =
+        budgetAmount <= 0 ? 0.0 : (used / budgetAmount).clamp(0.0, 1.0);
+    final color = over ? palette.expense : palette.primary;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return SlantCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CardHeader(
+            title: context.l10n.overviewMonthlyBudget,
+            trailing: Text(
+              '${MoneyUtil.format(used, symbol: symbol)} / ${MoneyUtil.format(budgetAmount, symbol: symbol)}',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              color: color,
+              backgroundColor: palette.divider,
+            ),
+          ),
+          if (over) ...[
+            const SizedBox(height: 8),
             Row(
               children: [
+                Icon(Icons.error_outline, size: 13, color: palette.expense),
+                const SizedBox(width: 4),
                 Text(
-                  context.l10n.overviewMonthlyBudget,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const Spacer(),
-                Text(
-                  '${MoneyUtil.format(used, symbol: symbol)} / ${MoneyUtil.format(budgetAmount, symbol: symbol)}',
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  context.l10n.overviewOverBudget,
+                  style: TextStyle(fontSize: 12, color: palette.expense),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                color: color,
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              ),
-            ),
-            if (over) ...[
-              const SizedBox(height: 8),
-              Text(
-                context.l10n.overviewOverBudget,
-                style: TextStyle(color: context.palette.expense, fontSize: 12),
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-/// 收支趋势折线图（v3.2）：区间可切（本周/本月/近3月/近6月/近12月），
+/// 收支趋势折线图：区间可切（本周/本月/近3月/近6月/近12月），
 /// 按区间步长降采样，呈现日间波动；双线（支出、收入）。
 class _TrendCard extends ConsumerWidget {
   const _TrendCard({required this.symbol});
@@ -326,129 +374,140 @@ class _TrendCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final palette = context.palette;
     final trend = ref.watch(trendProvider);
     final range = ref.watch(trendRangeProvider);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.overviewTrendTitle,
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 10),
-            _TrendRangePicker(
-              current: range,
-              onChanged: (r) => ref.read(trendRangeProvider.notifier).set(r),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 200,
-              child: LineChart(
-                LineChartData(
-                  minX: 0,
-                  maxX: (trend.length - 1).toDouble(),
-                  minY: 0,
-                  maxY: _maxY(trend) * 1.15,
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    horizontalInterval: _niceInterval(trend),
+    return SlantCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CardHeader(title: l10n.overviewTrendTitle),
+          const SizedBox(height: 10),
+          _TrendRangePicker(
+            current: range,
+            onChanged: (r) => ref.read(trendRangeProvider.notifier).set(r),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 190,
+            child: LineChart(
+              LineChartData(
+                minX: 0,
+                maxX: (trend.length - 1).toDouble(),
+                minY: 0,
+                maxY: _maxY(trend) * 1.15,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: _niceInterval(trend),
+                  getDrawingHorizontalLine: (v) => FlLine(
+                    color: palette.divider,
+                    strokeWidth: 1,
                   ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    topTitles: const AxisTitles(),
-                    rightTitles: const AxisTitles(),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 44,
-                        interval: _niceInterval(trend),
-                        getTitlesWidget: (v, meta) => Text(
-                          (v / 100).toStringAsFixed(0),
-                          style: TextStyle(fontSize: 10, color: context.palette.muted),
-                        ),
-                      ),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        // 周视图两行标签（日期 + 单字星期），需要更多高度
-                        reservedSize: range == TrendRange.week ? 38 : 28,
-                        getTitlesWidget: (v, meta) {
-                          final i = v.round();
-                          if (i < 0 || i >= trend.length) {
-                            return const SizedBox.shrink();
-                          }
-                          final isWeek = range == TrendRange.week;
-                          // 周视图每天都带标签；其余档位点数多，抽样显示避免重叠
-                          final every = isWeek ? 1 : (trend.length / 6).ceil();
-                          if (i % every != 0 && i != trend.length - 1) {
-                            return const SizedBox.shrink();
-                          }
-                          if (isWeek) {
-                            // 日期在上、星期在下（周一→「一」…周日→「日」）
-                            return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  trend[i].shortLabel,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: context.palette.muted,
-                                  ),
-                                ),
-                                Text(
-                                  l10n.weekdayChar(trend[i].start.weekday),
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    height: 1.1,
-                                    color: context.palette.muted,
-                                  ),
-                                ),
-                              ],
-                            );
-                          }
-                          return Text(
-                            trend[i].shortLabel,
-                            style: TextStyle(fontSize: 10, color: context.palette.muted),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  lineTouchData: LineTouchData(
-                    touchTooltipData: LineTouchTooltipData(
-                      getTooltipItems: (spots) => [
-                        for (final s in spots)
-                          LineTooltipItem(
-                            _tooltipText(l10n, s, trend),
-                            TextStyle(color: context.palette.onChartLabel),
-                          ),
-                      ],
-                    ),
-                  ),
-                  lineBarsData: [
-                    _line(
-                      trend,
-                      (b) => b.expense,
-                      context.palette.expense,
-                    ),
-                    _line(
-                      trend,
-                      (b) => b.income,
-                      context.palette.income,
-                    ),
-                  ],
                 ),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(),
+                  rightTitles: const AxisTitles(),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      interval: _niceInterval(trend),
+                      getTitlesWidget: (v, meta) => Text(
+                        (v / 100).toStringAsFixed(0),
+                        style: TextStyle(fontSize: 10, color: palette.muted),
+                      ),
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      // 周视图两行标签（日期 + 单字星期），需要更多高度
+                      reservedSize: range == TrendRange.week ? 38 : 28,
+                      getTitlesWidget: (v, meta) {
+                        final i = v.round();
+                        if (i < 0 || i >= trend.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final isWeek = range == TrendRange.week;
+                        // 周视图每天都带标签；其余档位点数多，抽样显示避免重叠
+                        final every = isWeek ? 1 : (trend.length / 6).ceil();
+                        if (i % every != 0 && i != trend.length - 1) {
+                          return const SizedBox.shrink();
+                        }
+                        if (isWeek) {
+                          // 日期在上、星期在下（周一→「一」…周日→「日」）
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                trend[i].shortLabel,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: palette.muted,
+                                ),
+                              ),
+                              Text(
+                                l10n.weekdayChar(trend[i].start.weekday),
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  height: 1.1,
+                                  color: palette.muted,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                        return Text(
+                          trend[i].shortLabel,
+                          style: TextStyle(fontSize: 10, color: palette.muted),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (_) => palette.primaryDeep,
+                    getTooltipItems: (spots) => [
+                      for (final s in spots)
+                        LineTooltipItem(
+                          _tooltipText(l10n, s, trend),
+                          TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                lineBarsData: [
+                  _line(
+                    trend,
+                    (b) => b.expense,
+                    palette.expense,
+                  ),
+                  _line(
+                    trend,
+                    (b) => b.income,
+                    palette.income,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            _legendDot(l10n.typeExpense, context.palette.expense),
-            _legendDot(l10n.typeIncome, context.palette.income),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _legendDot(context, l10n.typeExpense, palette.expense),
+              const SizedBox(width: 16),
+              _legendDot(context, l10n.typeIncome, palette.income),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -466,17 +525,21 @@ class _TrendCard extends ConsumerWidget {
     return '$label ${b.rangeLabel}\n${MoneyUtil.format(spot.y.round(), symbol: symbol)}';
   }
 
-  Widget _legendDot(String label, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 6),
-          Text(label, style: const TextStyle(fontSize: 12)),
-        ],
-      ),
+  Widget _legendDot(BuildContext context, String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11.5, color: context.palette.muted),
+        ),
+      ],
     );
   }
 
@@ -496,14 +559,26 @@ class _TrendCard extends ConsumerWidget {
           FlSpot(i.toDouble(), value(trend[i]).toDouble()),
       ],
       isCurved: true,
+      curveSmoothness: 0.2,
       color: color,
-      barWidth: 2.5,
+      barWidth: 2.2,
       dotData: FlDotData(
         show: true,
         getDotPainter: (spot, _, _, _) => FlDotCirclePainter(
-          radius: spot.x == last ? 3.5 : 2,
+          radius: spot.x == last ? 3.2 : 1.8,
           color: color,
           strokeWidth: 0,
+        ),
+      ),
+      belowBarData: BarAreaData(
+        show: true,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            color.withValues(alpha: 0.14),
+            color.withValues(alpha: 0.0),
+          ],
         ),
       ),
     );
@@ -526,7 +601,9 @@ class _TrendCard extends ConsumerWidget {
     final exp = (raw <= 0) ? 0.0 : (math.log(raw) / math.ln10).floorToDouble();
     final base = _pow10(exp);
     final firstDigit = raw / base;
-    final factor = firstDigit <= 1 ? 1.0 : (firstDigit <= 2 ? 2.0 : (firstDigit <= 5 ? 5.0 : 10.0));
+    final factor = firstDigit <= 1
+        ? 1.0
+        : (firstDigit <= 2 ? 2.0 : (firstDigit <= 5 ? 5.0 : 10.0));
     return base * factor;
   }
 
@@ -559,30 +636,34 @@ class _TrendRangePicker extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         for (final r in TrendRange.pinned)
-          ChoiceChip(
-            label: Text(l10n.trendRange(r)),
+          PillChip(
+            label: l10n.trendRange(r),
             selected: current == r,
-            visualDensity: VisualDensity.compact,
-            onSelected: (_) => onChanged(r),
+            onTap: () => onChanged(r),
           ),
         if (overflowSelected)
           // 选中长区间时把当前档位显示出来，避免「没有选中项」的错觉
-          ChoiceChip(
-            label: Text(l10n.trendRange(current)),
+          PillChip(
+            label: l10n.trendRange(current),
             selected: true,
-            visualDensity: VisualDensity.compact,
-            onSelected: (_) => onChanged(current),
+            onTap: () => onChanged(current),
           ),
         // 「更多…」入口常驻：默认选中近 6 月时也要能切到近 12 月
         PopupMenuButton<TrendRange>(
           tooltip: l10n.trendMoreRanges,
           onSelected: onChanged,
+          color: context.palette.card,
           itemBuilder: (_) => [
             for (final r in TrendRange.overflow)
               PopupMenuItem(value: r, child: Text(l10n.trendRange(r))),
           ],
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: context.palette.card,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: context.palette.divider),
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -590,12 +671,13 @@ class _TrendRangePicker extends StatelessWidget {
                   l10n.commonMore,
                   style: TextStyle(
                     fontSize: 13,
+                    fontWeight: FontWeight.w600,
                     color: context.palette.muted,
                   ),
                 ),
                 Icon(
                   Icons.expand_more,
-                  size: 16,
+                  size: 15,
                   color: context.palette.muted,
                 ),
               ],
@@ -607,7 +689,7 @@ class _TrendRangePicker extends StatelessWidget {
   }
 }
 
-/// 分类分析：支出 / 收入 Tab，环形图占比 + 金额排行。
+/// 分类分析：支出 / 收入切换，环形图占比 + 金额排行。
 class _CategoryAnalysisCard extends ConsumerStatefulWidget {
   const _CategoryAnalysisCard({required this.summary, required this.symbol});
 
@@ -625,131 +707,245 @@ class _CategoryAnalysisCardState extends ConsumerState<_CategoryAnalysisCard> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final palette = context.palette;
     final textTheme = Theme.of(context).textTheme;
     final shares = _tab == 0
         ? widget.summary.expenseByCategory
         : widget.summary.incomeByCategory;
-    final total = _tab == 0
-        ? widget.summary.totalExpense
-        : widget.summary.totalIncome;
+    final total =
+        _tab == 0 ? widget.summary.totalExpense : widget.summary.totalIncome;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return SlantCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CardHeader(
+            title: l10n.overviewCategoryAnalysis,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(l10n.overviewCategoryAnalysis,
-                    style: textTheme.titleMedium),
-                const Spacer(),
-                SegmentedButton<int>(
-                  showSelectedIcon: false,
-                  style: const ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  segments: [
-                    ButtonSegment(value: 0, label: Text(l10n.typeExpense)),
-                    ButtonSegment(value: 1, label: Text(l10n.typeIncome)),
-                  ],
-                  selected: {_tab},
-                  onSelectionChanged: (s) => setState(() => _tab = s.first),
+                PillChip(
+                  label: l10n.typeExpense,
+                  selected: _tab == 0,
+                  onTap: () => setState(() => _tab = 0),
+                ),
+                const SizedBox(width: 6),
+                PillChip(
+                  label: l10n.typeIncome,
+                  selected: _tab == 1,
+                  onTap: () => setState(() => _tab = 1),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            if (total == 0)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 32),
-                child: Center(
-                  child: Text(
-                    _tab == 0
-                        ? l10n.overviewNoExpenseInRange
-                        : l10n.overviewNoIncomeInRange,
-                  ),
-                ),
-              )
-            else
-              SizedBox(
-                height: 210,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: PieChart(
-                        PieChartData(
-                          centerSpaceRadius: 40,
-                          sectionsSpace: 2,
-                          startDegreeOffset: -90,
-                          sections: [
-                            for (final (i, share) in shares.indexed)
-                              PieChartSectionData(
-                                value: share.amountCents.toDouble(),
-                                color: context.palette.chartPalette[
-                                    i % context.palette.chartPalette.length],
-                                radius: 50,
-                                title:
-                                    '${(share.amountCents / total * 100).toStringAsFixed(0)}%',
-                                titleStyle: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: context.palette.onChartLabel,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (final (i, share) in shares.indexed)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 3),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 10,
-                                    height: 10,
-                                    decoration: BoxDecoration(
-                                      color: context.palette.chartPalette[
-                                          i % context.palette.chartPalette.length],
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      categoryDisplayName(l10n, share.category),
-                                      style: textTheme.bodySmall,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  Text(
-                                    MoneyUtil.format(
-                                      share.amountCents,
-                                      symbol: widget.symbol,
-                                    ),
-                                    style: textTheme.bodySmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
+          ),
+          const SizedBox(height: 16),
+          if (total == 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Text(
+                  _tab == 0
+                      ? l10n.overviewNoExpenseInRange
+                      : l10n.overviewNoIncomeInRange,
+                  style: TextStyle(fontSize: 13, color: palette.muted),
                 ),
               ),
-          ],
-        ),
+            )
+          else
+            SizedBox(
+              height: 200,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        PieChart(
+                          PieChartData(
+                            centerSpaceRadius: 34,
+                            sectionsSpace: 2,
+                            startDegreeOffset: -90,
+                            sections: [
+                              for (final (i, share) in shares.indexed)
+                                PieChartSectionData(
+                                  value: share.amountCents.toDouble(),
+                                  color: palette.chartPalette[
+                                      i % palette.chartPalette.length],
+                                  radius: 42,
+                                  title:
+                                      '${(share.amountCents / total * 100).toStringAsFixed(0)}%',
+                                  titleStyle: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: palette.onChartLabel,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              (total / 100).toStringAsFixed(0),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: palette.ink,
+                              ),
+                            ),
+                            Text(
+                              widget.symbol,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: palette.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 6,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final (i, share) in shares.take(5).indexed)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    color: palette.chartPalette[
+                                        i % palette.chartPalette.length],
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 7),
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(
+                                    categoryDisplayName(l10n, share.category),
+                                    style: textTheme.bodySmall?.copyWith(
+                                      fontSize: 12,
+                                      color: palette.ink,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                // 金额随可用宽度缩放，极端大额也不会撑破行
+                                Expanded(
+                                  flex: 3,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                      MoneyUtil.format(
+                                        share.amountCents,
+                                        symbol: widget.symbol,
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: palette.ink,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 34,
+                                  child: Text(
+                                    '${(share.amountCents / total * 100).toStringAsFixed(0)}%',
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: palette.muted,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 最近记录：标题 + 「查看全部」入口 + 列表。
+class _RecentCard extends StatelessWidget {
+  const _RecentCard({required this.recent, required this.categoryByKey});
+
+  final List<Transaction> recent;
+  final Map<int, Category> categoryByKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final palette = context.palette;
+
+    return SlantCard(
+      padding: const EdgeInsets.fromLTRB(18, 14, 10, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: CardHeader(title: l10n.overviewRecent),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const TransactionListPage(),
+                  ),
+                ),
+                child: Text(l10n.overviewViewAll),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          if (recent.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 12, 8, 20),
+              child: Center(
+                child: Text(
+                  l10n.overviewRecentEmpty,
+                  style: TextStyle(fontSize: 13, color: palette.muted),
+                ),
+              ),
+            )
+          else
+            for (final (i, t) in recent.indexed) ...[
+              TransactionTile(
+                transaction: t,
+                category: t.categoryId == null
+                    ? null
+                    : categoryByKey[t.categoryId],
+                onTap: () => TransactionDetailSheet.show(context, t),
+              ),
+              if (i != recent.length - 1)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Container(height: 1, color: palette.divider),
+                ),
+            ],
+        ],
       ),
     );
   }
