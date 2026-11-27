@@ -44,8 +44,15 @@ final currencyProvider = NotifierProvider<CurrencyNotifier, List<Currency>>(
 );
 
 /// 基准币种（默认 SGD，可在货币页切换）。
+///
+/// 必须 watch 币种列表本身：notifier 上的 `base` getter 读的是内部 state，
+/// 只 watch notifier 实例不会随列表变化重建，切换基准后星标/符号就会停在上一个基准。
 final baseCurrencyProvider = Provider<Currency>((ref) {
-  return ref.watch(currencyProvider.notifier).base;
+  final list = ref.watch(currencyProvider);
+  for (final c in list) {
+    if (c.isBase) return c;
+  }
+  return list.first;
 });
 
 /// 某币种对 SGD 的汇率（缺失时按 1 处理）。

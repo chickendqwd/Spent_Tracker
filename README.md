@@ -52,7 +52,7 @@ A personal expense tracker for recording spending and income, with time-based an
 ### v3.3 — Switchable base currency and JPY
 - **Switchable base currency**: in Settings → Currency a non-base currency can be promoted to base. Aggregates (balance, trend, annual report, budgets, category shares, charts) and their symbols follow the new base; the transaction list and detail sheet keep each entry's own currency
 - **No data rewriting**: rates are still stored as "1 unit = ? SGD" (SGD stays the conversion anchor), budgets and entries keep their stored amounts; only display converts, using a cross rate through SGD: `amount × rate(c) / rate(base)`
-- **JPY added**: preset currency 日本円 with the ¥ symbol; CNY and JPY share the symbol, so the list distinguishes them by name (and code). Online update now covers CNY / MYR / JPY and tells you which codes fell back to the local rate
+- **JPY added**: preset 日本円, whose symbol is 円 since v3.3.2 (it used to be ¥, the same as CNY); the list distinguishes currencies by name (and code). Online update now covers CNY / MYR / JPY and tells you which codes fell back to the local rate
 - **Symbol cleanup**: every hard-coded `S$` (budget page, over-budget hint, recurring-rule fallback, the old `constants.currencySymbol`) now resolves through the base currency, so switching the base never leaves a stale symbol on screen
 - **Budget rule spelled out**: Settings → Budgets now states in-line that a month without an explicit budget inherits the most recent month that has one, and that a month should have its budget deleted to mean "no limit"
 
@@ -60,6 +60,13 @@ A personal expense tracker for recording spending and income, with time-based an
 - **The trend card now opens on "this week"** instead of the last 6 months, so the first thing you see is the current week day by day
 - **Day-of-week labels**: in the week view each X-axis tick shows the date with a second line underneath carrying the weekday character (一 / 二 / 三 / 四 / 五 / 六 / 日); the axis reserves extra height for it
 - **No label sampling in the week view**: all 7 days get a label (longer ranges keep the sampling that prevents overlap), and the weekday line disappears as soon as you switch to a longer range
+
+### v3.3.2 — Full-range buckets, base-switch fixes, 円 for JPY
+- **Week and month charts cover the whole period**: this week is always Monday → Sunday (7 ticks) and this month is the 1st → month end, including days that have not happened yet; the line itself stops at today, so on a Wednesday it ends Wednesday instead of repeating Thursday/Friday
+- **Star follows the base currency**: `baseCurrencyProvider` used to watch the notifier instance rather than its state, so the UI never rebuilt after a switch; it now watches the currency list and updates immediately
+- **Symbol follows the base currency too**: amounts were already converted correctly, but the symbol came from the same stale provider; the star, totals, budgets and charts now all follow the new base at once
+- **New entries inherit the base currency**: after switching to JPY a new entry defaults to JPY
+- **JPY symbol is now 円**: no longer shares ¥ with CNY, and entries stored by older versions are migrated on launch
 
 ## Tech stack
 
@@ -103,7 +110,7 @@ test/
 
 | Platform | File | Install |
 |---|---|---|
-| Android | [SpentTracker-3.3.1-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.3.1-android.apk) (arm64, 19 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
+| Android | [SpentTracker-3.3.2-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.3.2-android.apk) (arm64, 19 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
 | iOS | [SpentTracker-unsigned.ipa](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-unsigned.ipa) | Unsigned build: sign it on the iPhone with iLoader + SideStore (see below) |
 
 All builds are attached to [Releases](https://github.com/chickendqwd/Spent_Tracker/releases). The APK is signed with the development key, which is fine for testing but means a build produced on another machine cannot be installed over it.
@@ -138,10 +145,10 @@ Note: reinstalling (uninstall then install) clears the local Hive data; an upgra
 
 ```bash
 flutter analyze   # static analysis
-flutter test      # 58 tests: 38 logic/repository tests, 18 UI interaction tests, 2 appearance persistence tests
+flutter test      # 62 tests: 51 logic/repository tests, 9 UI interaction tests, 2 appearance persistence tests
 ```
 
-Current status: `flutter analyze` reports no issues; `flutter test` passes 58/58. `flutter build windows --debug` also succeeds, which confirms the native file-picker plugin compiles.
+Current status: `flutter analyze` reports no issues; `flutter test` passes 62/62. `flutter build windows --debug` also succeeds, which confirms the native file-picker plugin compiles.
 
 ## Money and exchange rates
 
@@ -165,6 +172,7 @@ Current status: `flutter analyze` reports no issues; `flutter test` passes 58/58
 | `v3.2` | Trend ranges with step sampling, ~90 category icons plus custom input, month-end recurring dates, clearer amount validation |
 | `v3.3` | Switchable base currency with cross-rate conversion, JPY preset and online update, unified currency symbols, budget inheritance rule stated in-line |
 | `v3.3.1` | Trend chart defaults to this week, with weekday characters under each date in the week view |
+| `v3.3.2` | Trend charts cover the full week/month with the line stopping at today, base currency switch now refreshes star and symbols live, new entries inherit the base currency, JPY symbol changed to 円 |
 
 ## Known limitations
 

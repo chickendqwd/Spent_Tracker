@@ -406,11 +406,13 @@ class _TrendCard extends ConsumerWidget {
                   ),
                   lineBarsData: [
                     _line(
-                      trend.map((p) => p.expense).toList(),
+                      trend,
+                      (b) => b.expense,
                       context.palette.expense,
                     ),
                     _line(
-                      trend.map((p) => p.income).toList(),
+                      trend,
+                      (b) => b.income,
                       context.palette.income,
                     ),
                   ],
@@ -449,11 +451,20 @@ class _TrendCard extends ConsumerWidget {
     );
   }
 
-  LineChartBarData _line(List<int> values, Color color) {
-    final maxI = values.length - 1;
+  /// 折线只画到「今天」：本周/本月 X 轴后续是未来占位桶，不连线也不画点，
+  /// 因此周五打开时曲线停在周五，但轴上仍能看见六、日的位置。
+  LineChartBarData _line(
+    List<TrendBucket> trend,
+    int Function(TrendBucket) value,
+    Color color,
+  ) {
+    // 最后一个「已到达」的桶；全部在未来时退回 0，避免空 spots
+    var last = trend.lastIndexWhere((b) => !b.inFuture);
+    if (last < 0) last = 0;
     return LineChartBarData(
       spots: [
-        for (final (i, v) in values.indexed) FlSpot(i.toDouble(), v.toDouble()),
+        for (var i = 0; i <= last; i++)
+          FlSpot(i.toDouble(), value(trend[i]).toDouble()),
       ],
       isCurved: true,
       color: color,
@@ -461,7 +472,7 @@ class _TrendCard extends ConsumerWidget {
       dotData: FlDotData(
         show: true,
         getDotPainter: (spot, _, _, _) => FlDotCirclePainter(
-          radius: spot.x == maxI ? 3.5 : 2,
+          radius: spot.x == last ? 3.5 : 2,
           color: color,
           strokeWidth: 0,
         ),

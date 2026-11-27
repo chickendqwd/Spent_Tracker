@@ -43,7 +43,7 @@ void main() {
         Currency(
           code: 'JPY',
           name: '日元',
-          symbol: '¥',
+          symbol: '円',
           rateToSgd: 0.0086,
           isBase: base == 'JPY',
         ),
@@ -142,12 +142,21 @@ void main() {
       expect(repo.base.code, 'SGD');
     });
 
-    test('升级后自动补上 JPY 预设', () async {
+    test('升级后自动补上 JPY 预设（符号为「円」）', () async {
       // 模拟老用户：只有 SGD / CNY / MYR 三个币种
       await Db.currencies.delete('JPY');
       await initDatabaseAt(tempDir.path);
       expect(Db.currencies.containsKey('JPY'), isTrue);
-      expect(Db.currencies.get('JPY')!.symbol, '¥');
+      expect(Db.currencies.get('JPY')!.symbol, '円');
+    });
+
+    test('老版本写入的 JPY 符号 ¥ 会被迁移成「円」', () async {
+      // 模拟 3.3 装过的用户：JPY 已存在但符号还是 ¥
+      final jpy = Db.currencies.get('JPY')!;
+      jpy.symbol = '¥';
+      await Db.currencies.put('JPY', jpy);
+      await initDatabaseAt(tempDir.path);
+      expect(Db.currencies.get('JPY')!.symbol, '円');
     });
 
     test('切换基准后，provider 层读到的基准与符号同步变化', () async {
@@ -166,6 +175,26 @@ void main() {
         toBaseCents(container.read(currencyProvider), 10000, 'SGD'),
         53763,
       );
+    });
+
+    test('已运行的容器里，切换基准后 baseCurrencyProvider 会自己刷新', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final seen = <String>[];
+      container.listen<Currency>(
+        baseCurrencyProvider,
+        (_, next) => seen.add(next.code),
+        fireImmediately: true,
+      );
+
+      await const CurrencyRepository().setBase('JPY');
+      // 盒变更事件是异步流，等事件派发一次
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+
+      expect(seen, contains('JPY'));
+      expect(container.read(baseCurrencyProvider).code, 'JPY');
+      expect(container.read(baseCurrencyProvider).symbol, '円');
     });
   });
 }

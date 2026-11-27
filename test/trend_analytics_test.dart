@@ -8,17 +8,18 @@ void main() {
   final today = DateTime(2026, 11, 19);
 
   group('trendBucketRanges', () {
-    test('本周：从周一算到今天，逐日 4 个桶', () {
+    test('本周：周一到周日固定 7 个桶，还没到的天也占位', () {
       final ranges = trendBucketRanges(TrendRange.week, today);
-      expect(ranges.length, 4); // 周一 16 日 … 周四 19 日
+      expect(ranges.length, 7); // 周一 16 日 … 周日 22 日
       expect(ranges.first.start, DateTime(2026, 11, 16));
-      expect(ranges.last.end, DateTime(2026, 11, 19));
+      expect(ranges.last.end, DateTime(2026, 11, 22));
     });
 
-    test('本月：从 1 号算到今天', () {
+    test('本月：从 1 号到月末，整月天数', () {
       final ranges = trendBucketRanges(TrendRange.month, today);
       expect(ranges.first.start, DateTime(2026, 11, 1));
-      expect(ranges.last.end, today);
+      expect(ranges.length, 30); // 2026 年 11 月 30 天
+      expect(ranges.last.end, DateTime(2026, 11, 30));
     });
 
     test('近 3/6/12 月：按 5/10/15 天分桶，点数约 18/18/24', () {
@@ -73,6 +74,7 @@ void main() {
           tx('2026-11-10', 9999), // 区间外，应被忽略
         ],
         toCents: identity,
+        today: today,
       );
 
       expect(buckets[0].expense, 1500);
@@ -90,6 +92,7 @@ void main() {
         ranges: ranges,
         transactions: [tx('2026-08-22', 800)],
         toCents: identity,
+        today: today,
       );
       expect(buckets.first.expense, 800);
     });
@@ -111,8 +114,29 @@ void main() {
           ),
         ],
         toCents: convert,
+        today: today,
       );
-      expect(buckets.last.expense, 1190);
+      // 今天是周四 → 索引 3；后面三个是未来占位桶
+      expect(buckets[3].expense, 1190);
+      expect(buckets.where((b) => b.inFuture).length, 3);
+    });
+
+    test('未来桶标记 inFuture：今天之后的天占位，UI 不为其画点', () {
+      final ranges = trendBucketRanges(TrendRange.week, today);
+      final buckets = computeTrendBuckets(
+        ranges: ranges,
+        transactions: [tx('2026-11-20', 777)], // 周五（还没到）
+        toCents: identity,
+        today: today,
+      );
+
+      // 周一…周四已到达，周五/六/日三个桶在未来
+      expect(buckets.length, 7);
+      expect(buckets.firstWhere((b) => b.inFuture).start, DateTime(2026, 11, 20));
+      expect(buckets.last.start, DateTime(2026, 11, 22));
+      // 落在未来日期的账目仍聚合进对应桶（列表可记未来账），只是曲线不画到那里
+      expect(buckets[4].expense, 777);
+      expect(buckets[4].inFuture, isTrue);
     });
   });
 }

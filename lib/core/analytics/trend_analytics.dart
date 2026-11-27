@@ -36,18 +36,23 @@ enum TrendRange {
 /// 一个区间内的收支桶（金额为基准币种分）。
 ///
 /// `start`/`end` 均含端点；空桶金额为 0，不跳过，保证折线连续。
+/// [inFuture] 为 true 表示该桶在 `today` 之后：X 轴照常占位，但不画数据点。
 class TrendBucket {
   const TrendBucket({
     required this.start,
     required this.end,
     required this.expense,
     required this.income,
+    this.inFuture = false,
   });
 
   final DateTime start;
   final DateTime end;
   final int expense;
   final int income;
+
+  /// 该桶是否还没到（本周/本月会生成整段区间，未来天只占位不出数）
+  final bool inFuture;
 
   /// X 轴短标签，如「11/3」。
   String get shortLabel => '${start.month}/${start.day}';
@@ -79,34 +84,44 @@ typedef CentsConverter = int Function(int amount, String currencyCode);
 
 /// 生成某区间内按 [TrendRange.stepDays] 切分的桶区间（含端点，按天对齐）。
 ///
-/// 区间终点固定为 `today`（含），不回看未来日期，避免出现“未来全是 0”的假下降。
+/// - 本周：周一 → 周日，固定 7 桶；本月：1 号 → 月末，整月天数。
+///   这两档会把「还没到的天」也作为占位桶生成（见 [TrendBucket.inFuture]），
+///   避免 X 轴只铺到今天就显得挤在一起。
+/// - 近 3 / 6 / 12 月：区间终点固定为 `today`（含），不回看未来，避免出现"未来全是 0"的假下降。
 List<({DateTime start, DateTime end})> trendBucketRanges(
   TrendRange range,
   DateTime today,
 ) {
   final t = DateTime(today.year, today.month, today.day);
   final DateTime from;
+  final DateTime until;
   switch (range) {
     case TrendRange.week:
-      // 本周一（weekday: 周一=1 … 周日=7）
+      // 本周一（weekday: 周一=1 … 周日=7）→ 本周日
       from = t.subtract(Duration(days: t.weekday - 1));
+      until = DateTime(from.year, from.month, from.day + 6);
     case TrendRange.month:
       from = DateTime(t.year, t.month, 1);
+      // 当月最后一天：下月 0 号
+      until = DateTime(t.year, t.month + 1, 0);
     case TrendRange.threeMonths:
       from = t.subtract(const Duration(days: 89)); // 90 天 × 5 天步长 = 18 桶
+      until = t;
     case TrendRange.sixMonths:
       from = t.subtract(const Duration(days: 179)); // 180 天 / 10 = 18 桶
+      until = t;
     case TrendRange.twelveMonths:
       from = t.subtract(const Duration(days: 359)); // 360 天 / 15 = 24 桶
+      until = t;
   }
 
   final ranges = <({DateTime start, DateTime end})>[];
   var cursor = DateTime(from.year, from.month, from.day);
-  while (!cursor.isAfter(t)) {
+  while (!cursor.isAfter(until)) {
     final end = cursor.add(Duration(days: range.stepDays - 1));
     ranges.add((
       start: cursor,
-      end: end.isAfter(t) ? t : end,
+      end: end.isAfter(until) ? until : end,
     ));
     cursor = cursor.add(Duration(days: range.stepDays));
   }
@@ -116,11 +131,14 @@ List<({DateTime start, DateTime end})> trendBucketRanges(
 /// 按桶聚合账目：先按天落到桶索引，再累加，整体 O(桶天数 + 账目数)。
 ///
 /// [toCents] 把单笔金额折成基准币种分；空区间桶保留 0 值。
+/// [today] 用于标记未来桶：起点晚于今天的桶 `inFuture = true`，UI 不应为它画数据点。
 List<TrendBucket> computeTrendBuckets({
   required List<({DateTime start, DateTime end})> ranges,
   required List<Transaction> transactions,
   required CentsConverter toCents,
+  required DateTime today,
 }) {
+  final t = DateTime(today.year, today.month, today.day);
   final indexByDay = <String, int>{};
   for (var i = 0; i < ranges.length; i++) {
     final r = ranges[i];
@@ -134,11 +152,11 @@ List<TrendBucket> computeTrendBuckets({
   final expense = List<int>.filled(ranges.length, 0);
   final income = List<int>.filled(ranges.length, 0);
 
-  for (final t in transactions) {
-    final idx = indexByDay[t.date];
+  for (final tr in transactions) {
+    final idx = indexByDay[tr.date];
     if (idx == null) continue;
-    final cents = toCents(t.amount, t.currency);
-    if (t.transactionType == TransactionType.expense) {
+    final cents = toCents(tr.amount, tr.currency);
+    if (tr.transactionType == TransactionType.expense) {
       expense[idx] += cents;
     } else {
       income[idx] += cents;
@@ -152,6 +170,7 @@ List<TrendBucket> computeTrendBuckets({
         end: ranges[i].end,
         expense: expense[i],
         income: income[i],
+        inFuture: ranges[i].start.isAfter(t),
       ),
   ];
 }

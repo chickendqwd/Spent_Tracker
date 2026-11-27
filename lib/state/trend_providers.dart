@@ -22,10 +22,12 @@ final trendProvider = Provider<List<TrendBucket>>((ref) {
   final transactions = ref.watch(transactionProvider);
   final currencies = ref.watch(currencyProvider);
   final range = ref.watch(trendRangeProvider);
+  final now = DateTime.now();
 
   return computeTrendBuckets(
-    ranges: trendBucketRanges(range, DateTime.now()),
+    ranges: trendBucketRanges(range, now),
     transactions: transactions,
     toCents: (amount, code) => toBaseCents(currencies, amount, code),
+    today: now,
   );
 });

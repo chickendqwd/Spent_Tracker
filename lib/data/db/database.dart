@@ -39,7 +39,8 @@ class PresetCurrencies {
     (code: 'CNY', name: '人民币', symbol: '¥', rate: 0.186),
     (code: 'MYR', name: '马来西亚林吉特', symbol: 'RM', rate: 0.30),
     // JPY 的默认值只是量级占位（约 1 日元 ≈ 0.0086 新元），以联网或手填为准
-    (code: 'JPY', name: '日元', symbol: '¥', rate: 0.0086),
+    // 符号用「円」而非 ¥：人民币与日元同时用 ¥ 时无法一眼区分
+    (code: 'JPY', name: '日元', symbol: '円', rate: 0.0086),
   ];
 }
 
@@ -121,18 +122,27 @@ Future<void> _seedPresetCategoriesIfNeeded() async {
 }
 
 /// 首启写入默认币种与汇率（用 code 作 key，幂等）。
+/// 已安装用户升级时：缺哪个补哪个，并把 JPY 的历史符号 ¥ 修正为「円」。
 Future<void> _seedPresetCurrenciesIfNeeded() async {
   for (final item in PresetCurrencies.data) {
-    if (Db.currencies.containsKey(item.code)) continue;
-    await Db.currencies.put(
-      item.code,
-      Currency(
-        code: item.code,
-        name: item.name,
-        symbol: item.symbol,
-        rateToSgd: item.rate,
-        isBase: item.code == 'SGD',
-      ),
-    );
+    final existing = Db.currencies.get(item.code);
+    if (existing == null) {
+      await Db.currencies.put(
+        item.code,
+        Currency(
+          code: item.code,
+          name: item.name,
+          symbol: item.symbol,
+          rateToSgd: item.rate,
+          isBase: item.code == 'SGD',
+        ),
+      );
+      continue;
+    }
+    // v3.3.2 迁移：JPY 早期用 ¥ 与 CNY 撞符号，统一改成「円」
+    if (item.code == 'JPY' && existing.symbol == '¥') {
+      existing.symbol = item.symbol;
+      await Db.currencies.put(item.code, existing);
+    }
   }
 }

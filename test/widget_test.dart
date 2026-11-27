@@ -8,6 +8,7 @@ import 'package:hive/hive.dart';
 import 'package:spent_tracker/app.dart';
 import 'package:spent_tracker/core/theme/app_theme.dart';
 import 'package:spent_tracker/core/utils/date_util.dart';
+import 'package:spent_tracker/data/db/currency_repository.dart';
 import 'package:spent_tracker/data/db/database.dart';
 import 'package:spent_tracker/data/models/category.dart';
 import 'package:spent_tracker/data/models/transaction.dart';
@@ -360,6 +361,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('修改汇率'), findsOneWidget);
     expect(find.text('设为基准币种'), findsOneWidget);
+  });
+
+  testWidgets('基准为 JPY 时：总览符号变「円」，货币页星标落在日元行', (tester) async {
+    // 先把基准切成 JPY（FakeAsync 下 Hive 写入须走真实异步）
+    await tester.runAsync(() async {
+      await const CurrencyRepository().setBase('JPY');
+    });
+    await pumpApp(tester);
+
+    // 总览汇总符号跟随基准 → 円，而不是 S$ 或 ¥
+    expect(find.text('円0.00'), findsWidgets);
+    expect(find.text('S\$0.00'), findsNothing);
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('货币与汇率'));
+    await tester.pumpAndSettle();
+
+    // 星标必须在日元行，SGD 行不再是基准
+    final jpyTile = find.ancestor(
+      of: find.textContaining('日元 (JPY)'),
+      matching: find.byType(ListTile),
+    );
+    expect(
+      find.descendant(of: jpyTile, matching: find.byIcon(Icons.star)),
+      findsOneWidget,
+    );
+    // 日元为基准 → 不可设为基准，只剩 SGD / CNY / MYR 三个可操作菜单
+    expect(find.byType(PopupMenuButton<String>), findsNWidgets(3));
   });
 
   // 持久化属于真实 I/O，单独用真实异步验证（FakeAsync 下 Hive 写入不推进）
