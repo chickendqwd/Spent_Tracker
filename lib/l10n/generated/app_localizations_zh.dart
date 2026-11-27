@@ -509,7 +509,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String budgetsIntro(String name) {
-    return '金额按当前基准币种（$name）录入与显示。当月未设置预算时，自动沿用最近一个设置过预算的月份；想要「不设限制」请删除该月预算。';
+    return '金额默认按当前基准币种（$name）录入；每条预算也可以单独选择其他币种。当月未设置预算时，自动沿用最近一个设置过预算的月份；想要「不设限制」请删除该月预算。';
+  }
+
+  @override
+  String get budgetsDefaultCurrency => '默认预算币种';
+
+  @override
+  String get budgetsCurrencyFollowBase => '跟随基准币种';
+
+  @override
+  String get budgetsCurrency => '预算币种';
+
+  @override
+  String budgetsApprox(String amount) {
+    return '≈ $amount';
   }
 
   @override

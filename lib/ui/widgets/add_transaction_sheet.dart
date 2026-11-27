@@ -125,7 +125,11 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       final budget = catBudgets[_categoryId];
       if (budget != null) {
         final used = byCat[_categoryId] ?? 0;
-        final budgetBase = budgetCentsInBase(currencies, budget.amount);
+        final budgetBase = budgetCentsInBase(
+          currencies,
+          budget.amount,
+          budget.currencyCode,
+        );
         if (used + baseCents > budgetBase) {
           return l10n.entryOverCategoryBudget(
             MoneyUtil.format(budgetBase, symbol: '$baseSymbol '),
@@ -134,7 +138,11 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       }
     }
     if (totalBudget != null) {
-      final budgetBase = budgetCentsInBase(currencies, totalBudget.amount);
+      final budgetBase = budgetCentsInBase(
+        currencies,
+        totalBudget.amount,
+        totalBudget.currencyCode,
+      );
       if (monthExpense + baseCents > budgetBase) {
         return l10n.entryOverTotalBudget(
           MoneyUtil.format(budgetBase, symbol: '$baseSymbol '),
@@ -177,6 +185,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final note = _noteController.text.trim();
     final messenger = ScaffoldMessenger.of(context);
     final warning = _overBudgetWarning(cents);
+    final currencies = ref.read(currencyProvider);
 
     if (_isEdit) {
       // 编辑需二次确认（已确认规则）
@@ -199,12 +208,19 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       );
       if (confirmed != true || !mounted) return;
       final t = widget.existing!;
+      final currencyChanged = _currency != t.currency;
+      final amountChanged = cents != t.amount;
       t.type = _type.index;
       t.amount = cents;
       t.categoryId = categoryId;
       t.date = DateUtil.toDayKey(_date);
       t.note = note.isEmpty ? null : note;
       t.currency = _currency;
+      // 改了金额或币种才重取汇率快照；只改备注/日期/分类时保留原快照，
+      // 避免「编辑一下备注，历史金额就被今天的汇率改写」。
+      if (currencyChanged || amountChanged || t.rateToSgd == null) {
+        t.rateToSgd = rateOf(currencies, _currency);
+      }
       await ref.read(transactionProvider.notifier).update(t);
     } else {
       await ref
@@ -217,6 +233,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               date: DateUtil.toDayKey(_date),
               note: note.isEmpty ? null : note,
               currency: _currency,
+              // 记账时锁定汇率：之后汇率再变，这笔账的汇总金额不变
+              rateToSgd: rateOf(currencies, _currency),
               createdAt: DateTime.now(),
             ),
           );

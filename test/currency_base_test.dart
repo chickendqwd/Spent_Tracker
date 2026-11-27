@@ -6,6 +6,7 @@ import 'package:hive/hive.dart';
 
 import 'package:spent_tracker/data/db/currency_repository.dart';
 import 'package:spent_tracker/data/db/database.dart';
+import 'package:spent_tracker/data/models/budget.dart';
 import 'package:spent_tracker/data/models/currency.dart';
 import 'package:spent_tracker/state/budget_providers.dart';
 import 'package:spent_tracker/state/currency_providers.dart';
@@ -93,16 +94,23 @@ void main() {
     });
   });
 
-  group('预算金额：存储 SGD 分，展示按基准换算', () {
-    test('换算与回写互为逆运算', () {
+  group('预算金额：按录入币种存储，展示时换算到基准（v3.4.1）', () {
+    test('预算保持录入币种，展示换算到当前基准', () {
+      // 500 CNY 预算：存 50000 分 + currency='CNY'
+      final sgdBase = sample();
+      expect(budgetCentsInBase(sgdBase, 50000, 'CNY'), 9300);
+      // 基准切到 CNY 后原样展示
       final cnyBase = sample(base: 'CNY');
-      // 录入 500 CNY → 存 9300 分（SGD）
-      final stored = budgetCentsToSgd(cnyBase, 50000);
-      expect(stored, 9300);
-      // 展示回来仍是 500 CNY
-      expect(budgetCentsInBase(cnyBase, stored), 50000);
-      // 基准为 SGD 时不做任何换算
-      expect(budgetCentsInBase(sample(), 9300), 9300);
+      expect(budgetCentsInBase(cnyBase, 50000, 'CNY'), 50000);
+      // 预算币种等于基准时不做换算
+      expect(budgetCentsInBase(sgdBase, 9300, 'SGD'), 9300);
+    });
+
+    test('旧预算没有币种字段时按 SGD 处理', () {
+      final b = Budget(type: 0, month: '2026-10', amount: 9300);
+      expect(b.currencyCode, 'SGD');
+      expect(budgetCentsInBase(sample(base: 'CNY'), b.amount, b.currencyCode),
+          50000);
     });
   });
 

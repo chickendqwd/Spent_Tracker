@@ -521,7 +521,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String budgetsIntro(String name) {
-    return 'Amounts are entered and shown in the current base currency ($name). A month without an explicit budget inherits the most recent month that has one; delete that month\'s budget to mean “no limit”.';
+    return 'Amounts default to the current base currency ($name); each budget can also use its own currency. A month without an explicit budget inherits the most recent month that has one; delete that month\'s budget to mean “no limit”.';
+  }
+
+  @override
+  String get budgetsDefaultCurrency => 'Default budget currency';
+
+  @override
+  String get budgetsCurrencyFollowBase => 'Follow base currency';
+
+  @override
+  String get budgetsCurrency => 'Budget currency';
+
+  @override
+  String budgetsApprox(String amount) {
+    return '≈ $amount';
   }
 
   @override

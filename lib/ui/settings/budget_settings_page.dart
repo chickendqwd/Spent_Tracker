@@ -25,6 +25,16 @@ class BudgetSettingsPage extends ConsumerWidget {
     final month = ref.watch(budgetMonthProvider);
     final currencies = ref.watch(currencyProvider);
     final base = ref.watch(baseCurrencyProvider);
+    final budgetCurrencySetting = ref.watch(budgetCurrencyProvider);
+    Currency? budgetCurrency;
+    if (budgetCurrencySetting != null) {
+      for (final c in currencies) {
+        if (c.code == budgetCurrencySetting) {
+          budgetCurrency = c;
+          break;
+        }
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.budgetsTitle)),
@@ -41,6 +51,19 @@ class BudgetSettingsPage extends ConsumerWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.currency_exchange),
+            title: Text(l10n.budgetsDefaultCurrency),
+            subtitle: Text(
+              budgetCurrency == null
+                  ? l10n.budgetsCurrencyFollowBase
+                  : currencyDisplayName(l10n, budgetCurrency),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _pickDefaultCurrency(context, ref, currencies, base),
+          ),
+          const Divider(height: 8),
           if (budgets.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 48),
@@ -64,14 +87,57 @@ class BudgetSettingsPage extends ConsumerWidget {
     );
   }
 
+  /// 选择全局默认预算币种：跟随基准币种，或任一具体币种。
+  Future<void> _pickDefaultCurrency(
+    BuildContext context,
+    WidgetRef ref,
+    List<Currency> currencies,
+    Currency base,
+  ) async {
+    final l10n = context.l10n;
+    final selected = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(l10n.budgetsDefaultCurrency),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(ctx).pop(kFollowBaseCurrency),
+            child: Row(
+              children: [
+                Text(l10n.budgetsCurrencyFollowBase),
+                const SizedBox(width: 6),
+                Text(
+                  '(${currencyDisplayName(l10n, base)})',
+                  style: Theme.of(ctx).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          for (final c in currencies)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(ctx).pop(c.code),
+              child: Text('${c.symbol} ${currencyDisplayName(l10n, c)}'),
+            ),
+        ],
+      ),
+    );
+    if (selected == null) return;
+    await ref
+        .read(budgetCurrencyProvider.notifier)
+        .set(selected == kFollowBaseCurrency ? null : selected);
+  }
+
   Future<void> _add(BuildContext context, WidgetRef ref) async {
     final currencies = ref.read(currencyProvider);
-    final base = ref.read(baseCurrencyProvider);
     final result = await showDialog<_BudgetFormResult>(
       context: context,
       builder: (_) => _BudgetDialog(
         categories: ref.read(categoryProvider),
-        base: base,
+        currencies: currencies,
+        initialCurrency: defaultBudgetCurrencyCode(
+          currencies,
+          ref.read(budgetCurrencyProvider),
+        ),
       ),
     );
     if (result == null || !context.mounted) return;
@@ -83,8 +149,9 @@ class BudgetSettingsPage extends ConsumerWidget {
                 ? result.categoryId
                 : null,
             month: month,
-            // 录入按当前基准币种，存储统一折算回 SGD 分
-            amount: budgetCentsToSgd(currencies, result.amountCents),
+            // 金额与币种一起存，展示时再换算到基准
+            amount: result.amountCents,
+            currency: result.currency,
           ),
         );
   }
@@ -122,8 +189,15 @@ class _BudgetTile extends ConsumerWidget {
     final label = isTotal
         ? l10n.budgetTypeTotal
         : l10n.budgetsCategoryWith(name);
-    // 存储是 SGD 分，展示按当前基准币种换算
-    final amountInBase = budgetCentsInBase(currencies, budget.amount);
+    // 主显示为预算自身币种的金额；与基准不同时附「≈ 基准值」
+    final code = budget.currencyCode;
+    final symbol = symbolOf(currencies, code);
+    final amountInBase = budgetCentsInBase(currencies, budget.amount, code);
+    final approxBase = code == baseCodeOf(currencies)
+        ? null
+        : l10n.budgetsApprox(
+            MoneyUtil.format(amountInBase, symbol: '${base.symbol} '),
+          );
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -132,12 +206,19 @@ class _BudgetTile extends ConsumerWidget {
           isTotal ? Icons.savings_outlined : Icons.category_outlined,
         ),
         title: Text(label),
-        subtitle: Text(l10n.budgetsMonthLabel(budget.month)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.budgetsMonthLabel(budget.month)),
+            if (approxBase != null)
+              Text(approxBase, style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              MoneyUtil.format(amountInBase, symbol: '${base.symbol} '),
+              MoneyUtil.format(budget.amount, symbol: '$symbol '),
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 4),
@@ -158,14 +239,15 @@ class _BudgetTile extends ConsumerWidget {
   }
 
   Future<void> _edit(BuildContext context, WidgetRef ref) async {
-    final amountInBase = budgetCentsInBase(currencies, budget.amount);
     final result = await showDialog<_BudgetFormResult>(
       context: context,
       builder: (_) => _BudgetDialog(
         categories: ref.read(categoryProvider),
-        base: base,
+        currencies: currencies,
+        initialCurrency: budget.currencyCode,
         initialType: budget.budgetType,
-        initialAmount: MoneyUtil.inputText(amountInBase),
+        // 编辑时展示原录入值（原币种金额），而不是换算后的基准值
+        initialAmount: MoneyUtil.inputText(budget.amount),
         initialCategoryId: budget.categoryId,
       ),
     );
@@ -174,7 +256,8 @@ class _BudgetTile extends ConsumerWidget {
     budget.categoryId = result.type == BudgetType.category
         ? result.categoryId
         : null;
-    budget.amount = budgetCentsToSgd(currencies, result.amountCents);
+    budget.amount = result.amountCents;
+    budget.currency = result.currency;
     await ref.read(budgetProvider.notifier).update(budget);
   }
 
@@ -209,27 +292,34 @@ class _BudgetFormResult {
   const _BudgetFormResult({
     required this.type,
     required this.amountCents,
+    required this.currency,
     this.categoryId,
   });
 
   final BudgetType type;
   final int amountCents;
+  final String currency;
   final int? categoryId;
 }
+
+/// 默认币种选择器里代表「跟随基准币种」的哨兵值（不会与真实币种 code 冲突）。
+const kFollowBaseCurrency = '__follow_base_currency__';
 
 class _BudgetDialog extends StatefulWidget {
   const _BudgetDialog({
     required this.categories,
-    required this.base,
+    required this.currencies,
+    required this.initialCurrency,
     this.initialType = BudgetType.total,
     this.initialAmount,
     this.initialCategoryId,
   });
 
   final List<Category> categories;
+  final List<Currency> currencies;
 
-  /// 当前基准币种，金额按基准币种录入
-  final Currency base;
+  /// 录入币种（新增时为默认币种，编辑时为该预算原币种）
+  final String initialCurrency;
   final BudgetType initialType;
   final String? initialAmount;
   final int? initialCategoryId;
@@ -241,6 +331,7 @@ class _BudgetDialog extends StatefulWidget {
 class _BudgetDialogState extends State<_BudgetDialog> {
   late BudgetType _type;
   late final TextEditingController _amountController;
+  late String _currency;
   int? _categoryId;
 
   static final _amountFormat = RegExp(r'^\d{0,7}(\.\d{0,2})?$');
@@ -250,6 +341,7 @@ class _BudgetDialogState extends State<_BudgetDialog> {
     super.initState();
     _type = widget.initialType;
     _amountController = TextEditingController(text: widget.initialAmount ?? '');
+    _currency = widget.initialCurrency;
     _categoryId = widget.initialCategoryId;
   }
 
@@ -265,6 +357,7 @@ class _BudgetDialogState extends State<_BudgetDialog> {
     final expenseCategories = widget.categories
         .where((c) => c.type == 0)
         .toList(growable: false);
+    final symbol = symbolOf(widget.currencies, _currency);
 
     return AlertDialog(
       title: Text(l10n.budgetsDialogTitle),
@@ -292,6 +385,25 @@ class _BudgetDialogState extends State<_BudgetDialog> {
               }),
             ),
             const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _currency,
+              decoration: InputDecoration(
+                labelText: l10n.budgetsCurrency,
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: [
+                for (final c in widget.currencies)
+                  DropdownMenuItem(
+                    value: c.code,
+                    child: Text(
+                      '${c.symbol} ${currencyDisplayName(l10n, c)}',
+                    ),
+                  ),
+              ],
+              onChanged: (v) => setState(() => _currency = v ?? _currency),
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(
@@ -304,8 +416,8 @@ class _BudgetDialogState extends State<_BudgetDialog> {
                 ),
               ],
               decoration: InputDecoration(
-                labelText: l10n.budgetsAmountLabel(widget.base.code),
-                prefixText: '${widget.base.symbol} ',
+                labelText: l10n.budgetsAmountLabel(_currency),
+                prefixText: '$symbol ',
                 border: const OutlineInputBorder(),
               ),
             ),
@@ -355,6 +467,7 @@ class _BudgetDialogState extends State<_BudgetDialog> {
               _BudgetFormResult(
                 type: _type,
                 amountCents: cents,
+                currency: _currency,
                 categoryId: _type == BudgetType.category
                     ? (_categoryId ??
                         (expenseCategories.isEmpty

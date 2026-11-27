@@ -16,20 +16,23 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return Transaction(
+    final t = Transaction(
       type: fields[0] as int,
       amount: fields[1] as int,
       categoryId: fields[2] as int?,
       date: fields[3] as String,
       note: fields[4] as String?,
       createdAt: fields[5] as DateTime,
-    ).._currency = fields[6] as String?;
+    );
+    t._currency = fields[6] as String?;
+    t.rateToSgd = fields[7] as double?;
+    return t;
   }
 
   @override
   void write(BinaryWriter writer, Transaction obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.type)
       ..writeByte(1)
@@ -43,7 +46,9 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       ..writeByte(5)
       ..write(obj.createdAt)
       ..writeByte(6)
-      ..write(obj._currency);
+      ..write(obj._currency)
+      ..writeByte(7)
+      ..write(obj.rateToSgd);
   }
 
   @override

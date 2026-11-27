@@ -15,6 +15,7 @@ class Transaction extends HiveObject {
     this.note,
     required this.createdAt,
     String currency = 'SGD',
+    this.rateToSgd,
     // ignore: prefer_initializing_formals
   }) : _currency = currency;
 
@@ -51,6 +52,14 @@ class Transaction extends HiveObject {
   String get currency => _currency ?? 'SGD';
 
   set currency(String value) => _currency = value;
+
+  /// 记账时的汇率快照（1 单位 [currency] = ? SGD）。v3.4.1 新增。
+  ///
+  /// 汇总时优先用它，把历史账目固定在入账时的汇率上，之后修改汇率
+  /// 不再改变这笔账的金额。旧数据（v3.4 及以前）为 null，启动时按
+  /// 当时的汇率补写一次，此后同样固定。
+  @HiveField(7)
+  double? rateToSgd;
 
   TransactionType get transactionType => TransactionType.fromIndex(type);
 }

@@ -175,7 +175,11 @@
 
   "budgetsTitle": "Budgets",
   "budgetsCurrentMonth": "Current month: {month}",
-  "budgetsIntro": "Amounts are entered and shown in the current base currency ({name}). A month without an explicit budget inherits the most recent month that has one; delete that month's budget to mean “no limit”.",
+  "budgetsIntro": "Amounts default to the current base currency ({name}); each budget can also use its own currency. A month without an explicit budget inherits the most recent month that has one; delete that month's budget to mean “no limit”.",
+  "budgetsDefaultCurrency": "Default budget currency",
+  "budgetsCurrencyFollowBase": "Follow base currency",
+  "budgetsCurrency": "Budget currency",
+  "budgetsApprox": "≈ {amount}",
   "budgetsEmpty": "No budget this month\nTap “+” to add one",
   "budgetsAdd": "Add budget",
   "budgetsCategoryWith": "Category budget · {name}",

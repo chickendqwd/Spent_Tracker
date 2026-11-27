@@ -27,7 +27,12 @@ final trendProvider = Provider<List<TrendBucket>>((ref) {
   return computeTrendBuckets(
     ranges: trendBucketRanges(range, now),
     transactions: transactions,
-    toCents: (amount, code) => toBaseCents(currencies, amount, code),
+    toCents: (t) => transactionCentsInBase(
+      currencies,
+      t.amount,
+      t.currency,
+      rateSnapshot: t.rateToSgd,
+    ),
     today: now,
   );
 });

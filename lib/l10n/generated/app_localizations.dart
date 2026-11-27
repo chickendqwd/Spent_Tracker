@@ -1051,8 +1051,32 @@ abstract class AppLocalizations {
   /// No description provided for @budgetsIntro.
   ///
   /// In zh, this message translates to:
-  /// **'金额按当前基准币种（{name}）录入与显示。当月未设置预算时，自动沿用最近一个设置过预算的月份；想要「不设限制」请删除该月预算。'**
+  /// **'金额默认按当前基准币种（{name}）录入；每条预算也可以单独选择其他币种。当月未设置预算时，自动沿用最近一个设置过预算的月份；想要「不设限制」请删除该月预算。'**
   String budgetsIntro(String name);
+
+  /// No description provided for @budgetsDefaultCurrency.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认预算币种'**
+  String get budgetsDefaultCurrency;
+
+  /// No description provided for @budgetsCurrencyFollowBase.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随基准币种'**
+  String get budgetsCurrencyFollowBase;
+
+  /// No description provided for @budgetsCurrency.
+  ///
+  /// In zh, this message translates to:
+  /// **'预算币种'**
+  String get budgetsCurrency;
+
+  /// No description provided for @budgetsApprox.
+  ///
+  /// In zh, this message translates to:
+  /// **'≈ {amount}'**
+  String budgetsApprox(String amount);
 
   /// No description provided for @budgetsEmpty.
   ///

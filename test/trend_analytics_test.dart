@@ -54,7 +54,7 @@ void main() {
 
   group('computeTrendBuckets', () {
     // 恒等折算，专注验证分桶逻辑
-    int identity(int amount, String code) => amount;
+    int identity(Transaction t) => t.amount;
 
     Transaction tx(String date, int amount, {int type = 0}) => Transaction(
           type: type,
@@ -100,7 +100,8 @@ void main() {
     test('折算函数按币种被调用（金额按基准币种分入桶）', () {
       final ranges = trendBucketRanges(TrendRange.week, today);
       // 模拟“1 单位 CNY = 0.19 SGD 分”的折算
-      int convert(int amount, String code) => code == 'SGD' ? amount : (amount * 0.19).round();
+      int convert(Transaction t) =>
+          t.currency == 'SGD' ? t.amount : (t.amount * 0.19).round();
       final buckets = computeTrendBuckets(
         ranges: ranges,
         transactions: [

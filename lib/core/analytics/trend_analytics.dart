@@ -79,8 +79,9 @@ class MonthlyPoint {
   final int income;
 }
 
-/// 金额折算为基准币种分的函数（由调用方注入，core 层不依赖 state）。
-typedef CentsConverter = int Function(int amount, String currencyCode);
+/// 把单笔账目折算为基准币种分的函数（由调用方注入，core 层不依赖 state）。
+/// v3.4.1 起回调接收整笔账目，调用方可读取记账时的汇率快照。
+typedef CentsConverter = int Function(Transaction transaction);
 
 /// 生成某区间内按 [TrendRange.stepDays] 切分的桶区间（含端点，按天对齐）。
 ///
@@ -130,7 +131,7 @@ List<({DateTime start, DateTime end})> trendBucketRanges(
 
 /// 按桶聚合账目：先按天落到桶索引，再累加，整体 O(桶天数 + 账目数)。
 ///
-/// [toCents] 把单笔金额折成基准币种分；空区间桶保留 0 值。
+/// [toCents] 把单笔账目折成基准币种分；空区间桶保留 0 值。
 /// [today] 用于标记未来桶：起点晚于今天的桶 `inFuture = true`，UI 不应为它画数据点。
 List<TrendBucket> computeTrendBuckets({
   required List<({DateTime start, DateTime end})> ranges,
@@ -155,7 +156,7 @@ List<TrendBucket> computeTrendBuckets({
   for (final tr in transactions) {
     final idx = indexByDay[tr.date];
     if (idx == null) continue;
-    final cents = toCents(tr.amount, tr.currency);
+    final cents = toCents(tr);
     if (tr.transactionType == TransactionType.expense) {
       expense[idx] += cents;
     } else {

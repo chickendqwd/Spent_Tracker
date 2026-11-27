@@ -93,8 +93,12 @@ class OverviewPage extends ConsumerWidget {
           const SizedBox(height: 16),
           if (totalBudget != null) ...[
             _BudgetCard(
-              // 预算存的是 SGD 分，展示与已用金额统一换算到当前基准币种
-              budgetAmount: budgetCentsInBase(currencies, totalBudget.amount),
+              // 预算按自身币种存储，展示前换算到当前基准币种
+              budgetAmount: budgetCentsInBase(
+                currencies,
+                totalBudget.amount,
+                totalBudget.currencyCode,
+              ),
               used: thisMonthExpense,
               symbol: baseSymbol,
             ),

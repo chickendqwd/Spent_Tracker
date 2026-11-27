@@ -52,7 +52,12 @@ final rangeSummaryProvider = Provider<RangeSummary>((ref) {
 
   for (final t in transactions) {
     if (!range.containsKey(t.date)) continue;
-    final cents = toBaseCents(currencies, t.amount, t.currency);
+    final cents = transactionCentsInBase(
+      currencies,
+      t.amount,
+      t.currency,
+      rateSnapshot: t.rateToSgd,
+    );
     if (t.transactionType == TransactionType.expense) {
       expense += cents;
       final k = t.categoryId ?? uncategorizedKey;

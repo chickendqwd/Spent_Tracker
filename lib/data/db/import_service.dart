@@ -170,6 +170,12 @@ class ImportService {
     );
   }
 
+  /// 某个币种当前对 SGD 的汇率；缺失按 1 处理。
+  double _rateOf(String code) {
+    final c = Db.currencies.get(code);
+    return c?.rateToSgd ?? 1.0;
+  }
+
   /// 落库：按标识/名称映射到 categoryId（找不到则未分类），逐条追加。
   Future<ImportOutcome> commit(ImportDryRun dryRun) async {
     final index = _index();
@@ -191,6 +197,8 @@ class ImportService {
           note: src.note,
           createdAt: src.createdAt,
           currency: src.currency,
+          // v3.4.1：备份带汇率快照就沿用；没有则按导入时的汇率锁定
+          rateToSgd: src.rateToSgd ?? _rateOf(src.currency),
         ),
       );
       imported++;

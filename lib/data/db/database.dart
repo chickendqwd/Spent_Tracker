@@ -88,6 +88,23 @@ Future<void> _openBoxesAndSeed() async {
   Db.settings = await Hive.openBox('settings');
   await _seedPresetCategoriesIfNeeded();
   await _seedPresetCurrenciesIfNeeded();
+  await _backfillTransactionRates();
+}
+
+/// v3.4.1 迁移：旧账目没有汇率快照（rateToSgd），用「当前」汇率补写一次并永久固定。
+///
+/// 此后修改外币汇率时，历史账目的汇总金额不再变动。
+/// 幂等：已有快照的记录不会被改写；旧版本没有历史汇率可查，只能以升级时的值为准。
+Future<void> _backfillTransactionRates() async {
+  for (final t in Db.transactions.values.toList(growable: false)) {
+    if (t.rateToSgd != null) continue;
+    double rate = 1.0;
+    final currency = Db.currencies.get(t.currency);
+    if (currency != null) rate = currency.rateToSgd;
+    t.rateToSgd = rate;
+    final key = t.key;
+    if (key is int) await Db.transactions.put(key, t);
+  }
 }
 
 Future<void> _seedPresetCategoriesIfNeeded() async {

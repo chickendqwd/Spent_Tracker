@@ -76,6 +76,11 @@ A personal expense tracker for recording spending and income, with time-based an
 - **Search covers more**: the note, the category's displayed name in the current language, the amount as displayed, and the currency code or symbol all match as substrings (case-insensitive); a query that parses as an amount also matches it exactly, and duplicate-key handling is now language-neutral
 - **"View all" on the overview**: the recent-entries card has a View all button that opens the full transaction list, while the card itself keeps showing the latest 5
 
+### v3.4.1 — Due entries clear, per-budget currency, frozen historical rates
+- **The "due today" banner disappears once you log it**: it used to check only whether a recurring rule fell on today. It now also checks today's entries — if one already matches the rule's type, amount, currency and category, that rule drops out of the banner, whether you logged it from the banner or by hand
+- **Budgets can use their own currency**: each budget now stores an amount *and* the currency it was entered in. Settings → Budgets has a global "default budget currency" (follow the base currency, or pin SGD / CNY / MYR / JPY) and the add/edit dialog can override it per budget. The list shows the amount in the budget's own currency, plus "≈ base" when the two differ; comparisons against this month's spending still convert to the base currency. Budgets created by older versions read as SGD, which is how they were stored
+- **Historical entries keep the rate they were logged at**: every entry now stores a `rateToSgd` snapshot, and summaries, the trend chart, the annual report and budget progress all convert with it. Changing a currency's rate therefore no longer rewrites past amounts. Entries from older versions are locked to the rate in effect on the first launch after upgrading — the original rate was never recorded, so that is the only value available. Editing keeps the snapshot unless the amount or currency changes, and exports now carry it, so restoring a backup does not re-price history
+
 ## Tech stack
 
 | Purpose | Choice |
@@ -110,7 +115,8 @@ test/
 ├── import_test.dart                # CSV/JSON parsing (quotes, invalid rows) and dedup / category mapping
 ├── trend_analytics_test.dart       # trend bucketing: boundaries, continuity, step sampling, conversion calls
 ├── rule_and_icon_test.dart         # month-end clamping for recurring rules, category icon validation
-├── currency_base_test.dart         # base-currency cross rates, symbol fallback, setBase semantics, JPY seeding
+├── currency_base_test.dart         # base-currency cross rates, symbol fallback, setBase semantics, JPY seeding, per-budget currency
+├── v3_4_1_test.dart                # rate snapshots (freeze + migration), due-today clearing, budget currency UI
 └── widget_test.dart                # UI flows: entry, edit confirmation, category deletion, monthly summary, search, dark mode, trend ranges, currency page
 ```
 
@@ -118,7 +124,7 @@ test/
 
 | Platform | File | Install |
 |---|---|---|
-| Android | [SpentTracker-3.4-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.4-android.apk) (arm64, 20 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
+| Android | [SpentTracker-3.4.1-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.4.1-android.apk) (arm64, 20 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
 | iOS | [SpentTracker-unsigned.ipa](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-unsigned.ipa) | Unsigned build: sign it on the iPhone with iLoader + SideStore (see below) |
 
 All builds are attached to [Releases](https://github.com/chickendqwd/Spent_Tracker/releases). The APK is signed with the development key, which is fine for testing but means a build produced on another machine cannot be installed over it.
@@ -153,17 +159,18 @@ Note: reinstalling (uninstall then install) clears the local Hive data; an upgra
 
 ```bash
 flutter analyze   # static analysis
-flutter test      # 67 tests: 54 logic/repository tests, 11 UI interaction tests, 2 appearance persistence tests
+flutter test      # 74 tests: 58 logic/repository tests, 12 UI interaction tests, 2 appearance persistence tests
 ```
 
-Current status: `flutter analyze` reports no issues; `flutter test` passes 62/62. `flutter build windows --debug` also succeeds, which confirms the native file-picker plugin compiles.
+Current status: `flutter analyze` reports no issues; `flutter test` passes 74/74. `flutter build windows --debug` also succeeds, which confirms the native file-picker plugin compiles.
 
 ## Money and exchange rates
 
 - Amounts are always stored as **integer cents**
 - **SGD is the conversion anchor**: every rate means "1 unit of this currency = ? SGD", and SGD's rate is fixed at 1.0 (it cannot be edited)
 - The **base currency is selectable** (Settings → Currency). Presets: SGD (1.0), CNY (0.186), MYR (0.30), JPY (0.0086 — a placeholder, rely on online update or a manual value). Aggregates convert through SGD: `amount × rate(c) / rate(base)`
-- Budgets are stored in **SGD cents**; the budget page enters and shows them in the current base currency, converting on the way in and out, so switching the base never inflates or shrinks a budget
+- Budgets store their amount **in their own currency** (default: the base currency, overridable globally and per budget); the page shows the entered amount and, when the currency differs from the base, an "≈ base" hint. Older budgets read as SGD
+- **Historical entries keep the rate they were logged at**: each entry stores a rate snapshot, so later rate changes do not re-price the past; older entries are locked to the rate in effect at the first launch after upgrading
 - If the online update fails the app falls back to the manual rates and never blocks data entry
 - Budgets are monthly; a month without an explicit budget inherits the most recent month that has one (stated in-line on the budget page)
 
@@ -182,6 +189,7 @@ Current status: `flutter analyze` reports no issues; `flutter test` passes 62/62
 | `v3.3.1` | Trend chart defaults to this week, with weekday characters under each date in the week view |
 | `v3.3.2` | Trend charts cover the full week/month with the line stopping at today, base currency switch now refreshes star and symbols live, new entries inherit the base currency, JPY symbol changed to 円 |
 | `v3.4` | Chinese/English/Japanese UI with preset categories following the language, neutral export identifiers that survive cross-language import, GBK CSV import, wider search matching, View all from the overview |
+| `v3.4.1` | "Due today" reminders clear once the entry is logged, budgets can use their own currency (with a global default), historical entries and imports store and reuse an exchange-rate snapshot |
 
 ## Known limitations
 

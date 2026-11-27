@@ -34,6 +34,36 @@ final budgetProvider = NotifierProvider<BudgetNotifier, List<Budget>>(
   BudgetNotifier.new,
 );
 
+/// 预算全局默认币种的设置键。值存币种 code；键不存在 = 跟随基准币种。
+const _budgetCurrencyStorageKey = 'budgetCurrencyCode';
+
+/// 预算默认币种设置（v3.4.1）。null 表示跟随当前基准币种。
+class BudgetCurrencyNotifier extends Notifier<String?> {
+  @override
+  String? build() {
+    final raw = Db.settings.get(_budgetCurrencyStorageKey);
+    return raw is String && raw.isNotEmpty ? raw : null;
+  }
+
+  Future<void> set(String? code) async {
+    if (code == null || code.isEmpty) {
+      await Db.settings.delete(_budgetCurrencyStorageKey);
+    } else {
+      await Db.settings.put(_budgetCurrencyStorageKey, code);
+    }
+    state = (code == null || code.isEmpty) ? null : code;
+  }
+}
+
+final budgetCurrencyProvider =
+    NotifierProvider<BudgetCurrencyNotifier, String?>(
+      BudgetCurrencyNotifier.new,
+    );
+
+/// 新增预算时的默认币种：全局设置优先，未设置则跟随当前基准币种。
+String defaultBudgetCurrencyCode(List<Currency> currencies, String? setting) =>
+    (setting == null || setting.isEmpty) ? baseCodeOf(currencies) : setting;
+
 /// 本月生效预算：当月未设置时沿用最近一个有预算的月份。
 final effectiveBudgetsProvider = Provider<List<Budget>>((ref) {
   ref.watch(budgetProvider);
@@ -41,17 +71,15 @@ final effectiveBudgetsProvider = Provider<List<Budget>>((ref) {
   return const BudgetRepository().effectiveForMonth(month);
 });
 
-/// 预算金额的存储口径是「SGD 分」（历史数据不改写）。
-/// 展示与超支比较前换算到当前基准币种；基准为 SGD 时原样返回。
-int budgetCentsInBase(List<Currency> currencies, int sgdCents) =>
-    toBaseCents(currencies, sgdCents, 'SGD');
-
-/// 录入预算时把「当前基准币种分」转回「SGD 分」存储。
-int budgetCentsToSgd(List<Currency> currencies, int baseCents) {
-  final baseRate = baseRateOf(currencies);
-  if (baseRate <= 0) return baseCents;
-  return (baseCents * baseRate).round();
-}
+/// 预算金额折算为当前基准币种分（v3.4.1 起预算可自选币种）。
+///
+/// 预算金额与币种一起存储，展示/比较前换算到基准；预算本身不冻结汇率，
+/// 因为它是「这个月打算花多少」的目标值，跟着币种走才对。
+int budgetCentsInBase(
+  List<Currency> currencies,
+  int amount,
+  String currencyCode,
+) => transactionCentsInBase(currencies, amount, currencyCode);
 
 /// 本月生效的总预算（可能为 null，表示未设置）。
 final totalBudgetProvider = Provider<Budget?>((ref) {
@@ -81,7 +109,12 @@ final thisMonthExpenseProvider = Provider<int>((ref) {
   for (final t in transactions) {
     if (t.transactionType != TransactionType.expense) continue;
     if (DateUtil.monthKey(DateUtil.fromDayKey(t.date)) != month) continue;
-    expense += toBaseCents(currencies, t.amount, t.currency);
+    expense += transactionCentsInBase(
+      currencies,
+      t.amount,
+      t.currency,
+      rateSnapshot: t.rateToSgd,
+    );
   }
   return expense;
 });
@@ -97,7 +130,13 @@ final thisMonthExpenseByCategoryProvider = Provider<Map<int, int>>((ref) {
     if (t.transactionType != TransactionType.expense) continue;
     if (DateUtil.monthKey(DateUtil.fromDayKey(t.date)) != month) continue;
     final k = t.categoryId ?? uncategorizedKey;
-    byId[k] = (byId[k] ?? 0) + toBaseCents(currencies, t.amount, t.currency);
+    byId[k] = (byId[k] ?? 0) +
+        transactionCentsInBase(
+          currencies,
+          t.amount,
+          t.currency,
+          rateSnapshot: t.rateToSgd,
+        );
   }
   return byId;
 });

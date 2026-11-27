@@ -23,6 +23,7 @@ class Budget extends HiveObject {
     this.categoryId,
     required this.month,
     required this.amount,
+    this.currency,
   });
 
   /// 0=总预算，1=分类预算（对应 BudgetType.index，勿调整顺序）。
@@ -37,9 +38,17 @@ class Budget extends HiveObject {
   @HiveField(2)
   String month;
 
-  /// 预算金额（整数分），统一以基准币种 SGD 设定。
+  /// 预算金额（整数分），以 [currency] 计量。
+  /// v3.4.1 之前的旧数据统一是「SGD 分」，读取时 currency 为空按 SGD 处理。
   @HiveField(3)
   int amount;
+
+  /// 预算的录入币种（v3.4.1 新增）。为空表示旧数据，按 SGD 理解。
+  @HiveField(4)
+  String? currency;
+
+  /// 预算币种代码，旧数据回退 SGD。
+  String get currencyCode => currency ?? 'SGD';
 
   BudgetType get budgetType => BudgetType.fromIndex(type);
 }

@@ -5,6 +5,8 @@ import '../core/utils/date_util.dart';
 import '../data/db/database.dart';
 import '../data/db/recurring_rule_repository.dart';
 import '../data/models/recurring_rule.dart';
+import '../data/models/transaction.dart';
+import 'transaction_providers.dart';
 
 /// 周期规则盒变更事件流。
 final recurringRulesBoxEventsProvider = StreamProvider<BoxEvent>((ref) {
@@ -67,16 +69,42 @@ int _clampedDay(int dayValue, int year, int month) {
 }
 
 /// 今天到期的启用规则（用于总览「今日待记」提示条）。
+///
+/// v3.4.1：今天已有「同类型 + 同金额 + 同币种 + 同分类」的账目时，
+/// 视为这条规则今天已记，不再提示——否则记账后提示条仍留在首页。
 final todayDueRulesProvider = Provider<List<RecurringRule>>((ref) {
   final rules = ref.watch(recurringRuleProvider);
+  final transactions = ref.watch(transactionProvider);
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
+  final todayKey = DateUtil.toDayKey(today);
   return rules
       .where(
         (r) =>
             r.active &&
             !today.isBefore(DateUtil.fromDayKey(r.startDate)) &&
-            ruleMatches(r, today),
+            ruleMatches(r, today) &&
+            !_hasTodayEntry(transactions, r, todayKey),
       )
       .toList();
 });
+
+/// 今天是否已有一笔与该规则对应的账目。
+///
+/// 周期规则不写入「已记」标记，只按账目本身判断：
+/// 同日期、同类型、同金额、同币种、同分类即视为已记。
+bool _hasTodayEntry(
+  List<Transaction> transactions,
+  RecurringRule rule,
+  String todayKey,
+) {
+  for (final t in transactions) {
+    if (t.date != todayKey) continue;
+    if (t.type != rule.type) continue;
+    if (t.amount != rule.amount) continue;
+    if (t.currency != rule.currency) continue;
+    if (t.categoryId != rule.categoryId) continue;
+    return true;
+  }
+  return false;
+}

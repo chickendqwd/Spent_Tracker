@@ -175,7 +175,11 @@
 
   "budgetsTitle": "予算設定",
   "budgetsCurrentMonth": "今月：{month}",
-  "budgetsIntro": "金額は現在の基準通貨（{name}）で入力・表示します。予算を設定していない月は、直近に予算を設定した月を引き継ぎます。「制限なし」にしたい場合はその月の予算を削除してください。",
+  "budgetsIntro": "金額は既定で現在の基準通貨（{name}）で入力します。予算ごとに別の通貨も選べます。予算を設定していない月は、直近に予算を設定した月を引き継ぎます。「制限なし」にしたい場合はその月の予算を削除してください。",
+  "budgetsDefaultCurrency": "予算の既定通貨",
+  "budgetsCurrencyFollowBase": "基準通貨に従う",
+  "budgetsCurrency": "予算の通貨",
+  "budgetsApprox": "≈ {amount}",
   "budgetsEmpty": "今月の予算は未設定です\n右下の「+」から追加",
   "budgetsAdd": "予算を追加",
   "budgetsCategoryWith": "カテゴリ予算 · {name}",

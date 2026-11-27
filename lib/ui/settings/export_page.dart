@@ -96,6 +96,8 @@ class ExportPage extends ConsumerWidget {
             'date': t.date,
             'note': t.note ?? '',
             'createdAt': t.createdAt.toIso8601String(),
+            // v3.4.1：汇率快照随备份一起导出，恢复后历史金额不被今天的汇率改写
+            'rateToSgd': t.rateToSgd ?? '',
           },
       ];
 
@@ -142,7 +144,7 @@ class ExportPage extends ConsumerWidget {
 
   String _toCsv(List<Map<String, dynamic>> rows) {
     const header =
-        'id,type,typeName,amount,currency,categoryKey,categoryName,date,note,createdAt';
+        'id,type,typeName,amount,currency,categoryKey,categoryName,date,note,createdAt,rateToSgd';
     final lines = <String>[header];
     for (final r in rows) {
       lines.add([
@@ -156,6 +158,7 @@ class ExportPage extends ConsumerWidget {
         _csvEscape(r['date']),
         _csvEscape(r['note']),
         _csvEscape(r['createdAt']),
+        _csvEscape(r['rateToSgd']),
       ].join(','));
     }
     return lines.join('\n');

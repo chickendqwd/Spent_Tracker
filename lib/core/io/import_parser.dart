@@ -246,6 +246,10 @@ ImportCandidate? _buildCandidate(
   final createdAt = DateTime.tryParse(rawCreatedAt) ??
       DateUtil.fromDayKey(rawDate);
 
+  // 汇率快照（v3.4.1）：备份文件带 rateToSgd 时沿用，缺失则留给落库阶段按当前汇率补
+  final rawRate = (row['rateToSgd'] ?? '').toString().trim();
+  final rateToSgd = double.tryParse(rawRate);
+
   return ImportCandidate(
     rowNumber: rowNumber,
     categoryName: categoryName,
@@ -258,6 +262,7 @@ ImportCandidate? _buildCandidate(
       note: note,
       createdAt: createdAt,
       currency: currency,
+      rateToSgd: (rateToSgd != null && rateToSgd > 0) ? rateToSgd : null,
     ),
   );
 }

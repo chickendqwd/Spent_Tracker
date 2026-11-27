@@ -93,7 +93,12 @@ final annualSummaryProvider = Provider<AnnualSummary>((ref) {
     final d = DateUtil.fromDayKey(t.date);
     if (d.year != year) continue;
     recordCount++;
-    final cents = toBaseCents(currencies, t.amount, t.currency);
+    final cents = transactionCentsInBase(
+      currencies,
+      t.amount,
+      t.currency,
+      rateSnapshot: t.rateToSgd,
+    );
     final k = t.categoryId ?? uncategorizedKey;
     if (t.transactionType == TransactionType.expense) {
       totalExpense += cents;

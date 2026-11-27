@@ -106,3 +106,24 @@ int toBaseCents(List<Currency> currencies, int amount, String currencyCode) {
   if (rate <= 0 || baseRate <= 0) return amount;
   return (amount * rate / baseRate).round();
 }
+
+/// 单笔账目折算为当前基准币种分（v3.4.1）。
+///
+/// 优先用记账时的汇率快照 [rateSnapshot]（1 单位本币 = ? SGD），
+/// 这样之后修改外币汇率不会改变历史账目的金额。
+/// 无快照的旧数据（尚未迁移）回退当前汇率，与 v3.4 行为一致。
+/// 基准币种自身仍用当前汇率换算：切换基准时历史值会按展示换算，属预期。
+int transactionCentsInBase(
+  List<Currency> currencies,
+  int amount,
+  String currencyCode, {
+  double? rateSnapshot,
+}) {
+  if (currencyCode.isEmpty) return amount;
+  final baseRate = baseRateOf(currencies);
+  if (baseRate <= 0) return amount;
+  if (rateSnapshot != null && rateSnapshot > 0) {
+    return (amount * rateSnapshot / baseRate).round();
+  }
+  return toBaseCents(currencies, amount, currencyCode);
+}

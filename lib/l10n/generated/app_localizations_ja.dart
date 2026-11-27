@@ -510,7 +510,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String budgetsIntro(String name) {
-    return '金額は現在の基準通貨（$name）で入力・表示します。予算を設定していない月は、直近に予算を設定した月を引き継ぎます。「制限なし」にしたい場合はその月の予算を削除してください。';
+    return '金額は既定で現在の基準通貨（$name）で入力します。予算ごとに別の通貨も選べます。予算を設定していない月は、直近に予算を設定した月を引き継ぎます。「制限なし」にしたい場合はその月の予算を削除してください。';
+  }
+
+  @override
+  String get budgetsDefaultCurrency => '予算の既定通貨';
+
+  @override
+  String get budgetsCurrencyFollowBase => '基準通貨に従う';
+
+  @override
+  String get budgetsCurrency => '予算の通貨';
+
+  @override
+  String budgetsApprox(String amount) {
+    return '≈ $amount';
   }
 
   @override
