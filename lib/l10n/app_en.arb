@@ -291,5 +291,20 @@
   "importErrorRowNotObject": "not an object",
   "importErrorType": "Unrecognised type “{value}”",
   "importErrorAmount": "Invalid amount “{value}”",
-  "importErrorDate": "Invalid date “{value}” (expected yyyy-MM-dd)"
+  "importErrorDate": "Invalid date “{value}” (expected yyyy-MM-dd)",
+  "settingsPalette": "Colour scheme",
+  "settingsPaletteSubtitle": "10 three-colour schemes, monochrome by default",
+  "paletteTitle": "Colour scheme",
+  "paletteNote": "Applies immediately and carries into dark mode. Charts, buttons and selected states follow the accent colour.",
+  "paletteDefault": "Default",
+  "paletteGray": "Monochrome",
+  "paletteDeepForest": "Deep forest moss",
+  "paletteGlacier": "Glacier mist",
+  "paletteNavyGold": "Navy & gold",
+  "palettePeachSea": "Peach sea",
+  "paletteElectricBerry": "Electric berry",
+  "paletteTerracotta": "Terracotta modern",
+  "paletteForestNoir": "Forest noir",
+  "paletteSkyWood": "Sky & wood",
+  "paletteRoseStone": "Rose stone"
 }

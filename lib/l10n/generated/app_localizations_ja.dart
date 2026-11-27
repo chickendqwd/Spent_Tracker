@@ -918,4 +918,50 @@ class AppLocalizationsJa extends AppLocalizations {
   String importErrorDate(String value) {
     return '日付が無効です「$value」（yyyy-MM-dd 形式）';
   }
+
+  @override
+  String get settingsPalette => 'カラーテーマ';
+
+  @override
+  String get settingsPaletteSubtitle => '3色の配色10種（既定はモノクロ）';
+
+  @override
+  String get paletteTitle => 'カラーテーマ';
+
+  @override
+  String get paletteNote =>
+      '選択はすぐに反映され、ダークモードにも引き継がれます。グラフ・ボタン・選択状態はアクセント色に連動します。';
+
+  @override
+  String get paletteDefault => '既定';
+
+  @override
+  String get paletteGray => 'モノクロ';
+
+  @override
+  String get paletteDeepForest => '深い苔';
+
+  @override
+  String get paletteGlacier => '氷河の霧';
+
+  @override
+  String get paletteNavyGold => 'ネイビー＆ゴールド';
+
+  @override
+  String get palettePeachSea => 'ピーチシー';
+
+  @override
+  String get paletteElectricBerry => 'エレクトリックベリー';
+
+  @override
+  String get paletteTerracotta => 'テラコッタモダン';
+
+  @override
+  String get paletteForestNoir => 'フォレストノワール';
+
+  @override
+  String get paletteSkyWood => 'スカイ＆ウッド';
+
+  @override
+  String get paletteRoseStone => 'ローズストーン';
 }

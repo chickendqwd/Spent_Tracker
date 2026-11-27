@@ -1713,6 +1713,96 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'日期无效「{value}」（应为 yyyy-MM-dd）'**
   String importErrorDate(String value);
+
+  /// No description provided for @settingsPalette.
+  ///
+  /// In zh, this message translates to:
+  /// **'配色方案'**
+  String get settingsPalette;
+
+  /// No description provided for @settingsPaletteSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'10 套三色配色，默认黑白灰'**
+  String get settingsPaletteSubtitle;
+
+  /// No description provided for @paletteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'配色方案'**
+  String get paletteTitle;
+
+  /// No description provided for @paletteNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换后立即生效，并同步到深色模式；图表、按钮与选中态会跟随主色。'**
+  String get paletteNote;
+
+  /// No description provided for @paletteDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认'**
+  String get paletteDefault;
+
+  /// No description provided for @paletteGray.
+  ///
+  /// In zh, this message translates to:
+  /// **'黑白灰'**
+  String get paletteGray;
+
+  /// No description provided for @paletteDeepForest.
+  ///
+  /// In zh, this message translates to:
+  /// **'深林苔'**
+  String get paletteDeepForest;
+
+  /// No description provided for @paletteGlacier.
+  ///
+  /// In zh, this message translates to:
+  /// **'冰川雾'**
+  String get paletteGlacier;
+
+  /// No description provided for @paletteNavyGold.
+  ///
+  /// In zh, this message translates to:
+  /// **'海军金'**
+  String get paletteNavyGold;
+
+  /// No description provided for @palettePeachSea.
+  ///
+  /// In zh, this message translates to:
+  /// **'蜜桃海'**
+  String get palettePeachSea;
+
+  /// No description provided for @paletteElectricBerry.
+  ///
+  /// In zh, this message translates to:
+  /// **'电音莓'**
+  String get paletteElectricBerry;
+
+  /// No description provided for @paletteTerracotta.
+  ///
+  /// In zh, this message translates to:
+  /// **'陶土现代'**
+  String get paletteTerracotta;
+
+  /// No description provided for @paletteForestNoir.
+  ///
+  /// In zh, this message translates to:
+  /// **'森林香'**
+  String get paletteForestNoir;
+
+  /// No description provided for @paletteSkyWood.
+  ///
+  /// In zh, this message translates to:
+  /// **'晴空木'**
+  String get paletteSkyWood;
+
+  /// No description provided for @paletteRoseStone.
+  ///
+  /// In zh, this message translates to:
+  /// **'柔粉岩'**
+  String get paletteRoseStone;
 }
 
 class _AppLocalizationsDelegate

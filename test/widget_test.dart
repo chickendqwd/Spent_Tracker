@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
 import 'package:spent_tracker/app.dart';
+import 'package:spent_tracker/core/theme/app_schemes.dart';
 import 'package:spent_tracker/core/theme/app_theme.dart';
 import 'package:spent_tracker/core/utils/date_util.dart';
 import 'package:spent_tracker/data/db/currency_repository.dart';
@@ -416,5 +417,53 @@ void main() {
     final restarted = ProviderContainer();
     addTearDown(restarted.dispose);
     expect(restarted.read(themeModeProvider), ThemeMode.dark);
+  });
+
+  testWidgets('配色方案：默认黑白灰、10 套可选、切换后主色跟随强调色', (tester) async {
+    await pumpApp(tester);
+
+    // 默认是黑白灰：亮色主色为近黑
+    final shellCtx = tester.element(find.byType(Scaffold).first);
+    expect(Theme.of(shellCtx).extension<AppPalette>()!.primary,
+        AppPalette.light.primary);
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('配色方案'));
+    await tester.pumpAndSettle();
+
+    // 10 套方案全部可见（默认项带「默认」标签）
+    expect(find.text('黑白灰'), findsOneWidget);
+    expect(find.text('默认'), findsOneWidget);
+    expect(find.text('深林苔'), findsOneWidget);
+    expect(find.text('海军金'), findsOneWidget);
+    expect(find.text('柔粉岩'), findsOneWidget);
+    // 每行都有 3 个色球（10 行 × 3）
+    expect(AppPaletteSchemes.all.length, 10);
+    expect(
+      AppPaletteSchemes.all.every((s) => s.dots.length == 3),
+      isTrue,
+    );
+    // 只有一个选中勾
+    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+
+    // 切到深林苔：Hive 写入须在真实 zone 中执行
+    await tester.runAsync(() async {
+      await tester.tap(find.text('深林苔'));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    });
+    await tester.pumpAndSettle();
+
+    final pageCtx = tester.element(find.byType(Scaffold).last);
+    expect(
+      Theme.of(pageCtx).extension<AppPalette>()!.primary,
+      AppPaletteSchemes.deepForest.accent,
+    );
+    expect(Db.settings.get(PaletteSchemeNotifier.storageKey), 'deepForest');
+
+    // 新实例从 Hive 恢复同一套配色
+    final restarted = ProviderContainer();
+    addTearDown(restarted.dispose);
+    expect(restarted.read(paletteSchemeProvider).id, 'deepForest');
   });
 }

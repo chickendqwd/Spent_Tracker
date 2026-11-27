@@ -935,4 +935,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String importErrorDate(String value) {
     return 'Invalid date “$value” (expected yyyy-MM-dd)';
   }
+
+  @override
+  String get settingsPalette => 'Colour scheme';
+
+  @override
+  String get settingsPaletteSubtitle =>
+      '10 three-colour schemes, monochrome by default';
+
+  @override
+  String get paletteTitle => 'Colour scheme';
+
+  @override
+  String get paletteNote =>
+      'Applies immediately and carries into dark mode. Charts, buttons and selected states follow the accent colour.';
+
+  @override
+  String get paletteDefault => 'Default';
+
+  @override
+  String get paletteGray => 'Monochrome';
+
+  @override
+  String get paletteDeepForest => 'Deep forest moss';
+
+  @override
+  String get paletteGlacier => 'Glacier mist';
+
+  @override
+  String get paletteNavyGold => 'Navy & gold';
+
+  @override
+  String get palettePeachSea => 'Peach sea';
+
+  @override
+  String get paletteElectricBerry => 'Electric berry';
+
+  @override
+  String get paletteTerracotta => 'Terracotta modern';
+
+  @override
+  String get paletteForestNoir => 'Forest noir';
+
+  @override
+  String get paletteSkyWood => 'Sky & wood';
+
+  @override
+  String get paletteRoseStone => 'Rose stone';
 }

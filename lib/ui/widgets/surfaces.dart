@@ -74,6 +74,7 @@ class SlantCard extends StatelessWidget {
     this.padding = const EdgeInsets.fromLTRB(18, 14, 16, 14),
     this.tint = false,
     this.accentColor,
+    this.background,
     this.barWidth = 4,
     this.elevation = 1.4,
   });
@@ -85,6 +86,9 @@ class SlantCard extends StatelessWidget {
   /// true 时用浅色 tint 底（主卡/强调块）
   final bool tint;
 
+  /// 指定卡面底色（如深色 hero 主卡），优先于 [tint]
+  final Color? background;
+
   /// 左侧色条颜色，默认取主色
   final Color? accentColor;
 
@@ -95,7 +99,7 @@ class SlantCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     final barColor = accentColor ?? palette.primary;
-    final color = tint ? palette.cardTint : palette.card;
+    final color = background ?? (tint ? palette.cardTint : palette.card);
 
     final card = PhysicalShape(
       clipper: const SlantCardClipper(),

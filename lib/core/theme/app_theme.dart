@@ -66,51 +66,54 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// 分隔线 / 细描边
   final Color divider;
 
+  /// 默认方案（黑白灰）的亮色色板。
+  /// 其余配色方案由 [AppPaletteSchemes] 按三色派生，见 `app_schemes.dart`。
   static const AppPalette light = AppPalette(
-    expense: Color(0xFFB0563F),
-    income: Color(0xFF6B8E5A),
-    muted: Color(0xFF7A8288),
+    expense: Color(0xFF333333),
+    income: Color(0xFF7A7A7A),
+    muted: Color(0xFF7C7C7C),
     onChartLabel: Colors.white,
-    accent: Color(0xFFB98A6F),
-    primary: Color(0xFF5E8B7E),
-    primaryDeep: Color(0xFF1F5F56),
-    card: Color(0xFFFBFAF7),
-    cardTint: Color(0xFFF0F5F2),
-    bgTop: Color(0xFFFFFFFF),
-    bgBottom: Color(0xFFEEF0F2),
-    ink: Color(0xFF202020),
-    divider: Color(0xFFDFE4E6),
+    accent: Color(0xFF8A8A8A),
+    primary: Color(0xFF121212),
+    primaryDeep: Color(0xFF121212),
+    card: Color(0xFFFFFFFF),
+    cardTint: Color(0xFFF4F4F4),
+    bgTop: Color(0xFFFBFBFB),
+    bgBottom: Color(0xFFEDEDED),
+    ink: Color(0xFF111111),
+    divider: Color(0xFFE2E2E2),
     chartPalette: [
-      Color(0xFF5E8B7E),
-      Color(0xFF7FA6B8),
-      Color(0xFFC9B87A),
-      Color(0xFFB98A6F),
-      Color(0xFF6B8E5A),
-      Color(0xFF9AA3A8),
+      Color(0xFF121212),
+      Color(0xFF4A4A4A),
+      Color(0xFF8A8A8A),
+      Color(0xFFB8B8B8),
+      Color(0xFF6E6E6E),
+      Color(0xFFDCDCDC),
     ],
   );
 
+  /// 默认方案（黑白灰）的暗色色板。
   static const AppPalette dark = AppPalette(
-    expense: Color(0xFFE08970),
-    income: Color(0xFF8FB87B),
-    muted: Color(0xFF98A3A8),
+    expense: Color(0xFFE8E8E8),
+    income: Color(0xFF9E9E9E),
+    muted: Color(0xFF9A9A9A),
     onChartLabel: Colors.white,
-    accent: Color(0xFFC89B7F),
-    primary: Color(0xFF8CBBAD),
-    primaryDeep: Color(0xFF2E7265),
-    card: Color(0xFF1D2427),
-    cardTint: Color(0xFF24312D),
-    bgTop: Color(0xFF14191B),
-    bgBottom: Color(0xFF0E1214),
-    ink: Color(0xFFEDF1F0),
-    divider: Color(0xFF2C3437),
+    accent: Color(0xFFB4B4B4),
+    primary: Color(0xFFE6E6E6),
+    primaryDeep: Color(0xFFF5F5F5),
+    card: Color(0xFF1C1C1C),
+    cardTint: Color(0xFF262626),
+    bgTop: Color(0xFF141414),
+    bgBottom: Color(0xFF0D0D0D),
+    ink: Color(0xFFF2F2F2),
+    divider: Color(0xFF2E2E2E),
     chartPalette: [
-      Color(0xFF8CBBAD),
-      Color(0xFF8FB8CC),
-      Color(0xFFD9C58C),
-      Color(0xFFC89B7F),
-      Color(0xFF8FB87B),
-      Color(0xFFA9B2B7),
+      Color(0xFFE6E6E6),
+      Color(0xFFB0B0B0),
+      Color(0xFF808080),
+      Color(0xFF5A5A5A),
+      Color(0xFFCFCFCF),
+      Color(0xFF3E3E3E),
     ],
   );
 
@@ -187,13 +190,30 @@ class AppTheme {
   /// 卡片右上角斜切宽度
   static const double cardSlant = 26;
 
-  static ThemeData light() => _build(Brightness.light, AppPalette.light);
+  /// 在给定底色上可读的文字色（白 / 近黑，取对比度更高者）。
+  static Color bestOnColor(Color background) {
+    final l = background.computeLuminance();
+    final onWhite = 1.05 / (l + 0.05);
+    final onDark = (l + 0.05) / 0.05;
+    return onWhite >= onDark ? Colors.white : const Color(0xFF111111);
+  }
 
-  static ThemeData dark() => _build(Brightness.dark, AppPalette.dark);
+  static ThemeData light() => lightWith(AppPalette.light);
+
+  static ThemeData dark() => darkWith(AppPalette.dark);
+
+  /// 按指定色板构建亮色主题（配色方案切换时使用）。
+  static ThemeData lightWith(AppPalette palette) =>
+      _build(Brightness.light, palette);
+
+  /// 按指定色板构建暗色主题。
+  static ThemeData darkWith(AppPalette palette) =>
+      _build(Brightness.dark, palette);
 
   static ThemeData _build(Brightness brightness, AppPalette palette) {
     final isLight = brightness == Brightness.light;
-    final onPrimary = isLight ? Colors.white : const Color(0xFF0F1B18);
+    // 强调色亮度不定（金色、鼠尾草绿偏亮），按对比度选白字或深字。
+    final onPrimary = bestOnColor(palette.primary);
 
     final scheme = ColorScheme.fromSeed(
       seedColor: palette.primary,

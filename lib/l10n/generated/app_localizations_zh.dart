@@ -915,4 +915,49 @@ class AppLocalizationsZh extends AppLocalizations {
   String importErrorDate(String value) {
     return '日期无效「$value」（应为 yyyy-MM-dd）';
   }
+
+  @override
+  String get settingsPalette => '配色方案';
+
+  @override
+  String get settingsPaletteSubtitle => '10 套三色配色，默认黑白灰';
+
+  @override
+  String get paletteTitle => '配色方案';
+
+  @override
+  String get paletteNote => '切换后立即生效，并同步到深色模式；图表、按钮与选中态会跟随主色。';
+
+  @override
+  String get paletteDefault => '默认';
+
+  @override
+  String get paletteGray => '黑白灰';
+
+  @override
+  String get paletteDeepForest => '深林苔';
+
+  @override
+  String get paletteGlacier => '冰川雾';
+
+  @override
+  String get paletteNavyGold => '海军金';
+
+  @override
+  String get palettePeachSea => '蜜桃海';
+
+  @override
+  String get paletteElectricBerry => '电音莓';
+
+  @override
+  String get paletteTerracotta => '陶土现代';
+
+  @override
+  String get paletteForestNoir => '森林香';
+
+  @override
+  String get paletteSkyWood => '晴空木';
+
+  @override
+  String get paletteRoseStone => '柔粉岩';
 }

@@ -11,6 +11,7 @@ import 'currency_page.dart';
 import 'export_page.dart';
 import 'import_page.dart';
 import 'language_page.dart';
+import 'palette_page.dart';
 import 'recurring_rules_page.dart';
 
 /// 设置主页：语言 + 外观、分类/预算/周期、年报、货币、导入导出。
@@ -30,6 +31,14 @@ class SettingsPage extends StatelessWidget {
             _Group(
               label: l10n.settingsGroupGeneral,
               entries: [
+                _Entry(
+                  icon: Icons.format_paint_outlined,
+                  title: l10n.settingsPalette,
+                  subtitle: l10n.settingsPaletteSubtitle,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PalettePage()),
+                  ),
+                ),
                 _Entry(
                   icon: Icons.palette_outlined,
                   title: l10n.settingsAppearance,

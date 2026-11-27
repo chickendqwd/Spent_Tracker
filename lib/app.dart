@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/constants.dart';
+import 'core/theme/app_schemes.dart';
 import 'core/theme/app_theme.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'state/language_providers.dart';
@@ -16,6 +17,7 @@ class SpentTrackerApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final scheme = ref.watch(paletteSchemeProvider);
     final locale = ref.watch(languageProvider);
     return MaterialApp(
       title: AppConstants.appName,
@@ -24,8 +26,8 @@ class SpentTrackerApp extends ConsumerWidget {
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.lightWith(buildLightPalette(scheme)),
+      darkTheme: AppTheme.darkWith(buildDarkPalette(scheme)),
       themeMode: themeMode,
       home: const AppShell(),
     );

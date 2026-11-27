@@ -246,3 +246,38 @@ P5 的菜单从角落斜切飞入、面板砸入、条纹转场很惊艳，但�
 | 标签切换淡入 + 轻上移 | `lib/ui/app_shell.dart`（240ms，IndexedStack 保留各页状态） |
 
 约束：所有文案取自 `lib/l10n/`，不新增硬编码中文；`flutter analyze` 无告警，`flutter test` 75 项全绿（含窄屏 360dp 溢出冒烟测试）。
+
+## 追加：10 套三色配色方案（可切换）
+
+用户已否掉初版青碧绿，改为「黑主卡 + 白卡」布局 + 多套三色配色自选，默认黑白灰。
+
+角色映射（固定，所有方案一致）：
+
+- 最深色 → 结余主卡底（白字）、标题强调、图标色
+- 最饱和色 → 强调色：选中胶囊、预算进度条、趋势主折线、标题小方块
+- 最浅色 → 页面背景（顶部略提亮做渐变）与卡片浅底
+
+| id | 名称 | 主卡 | 强调 | 底色 |
+| --- | --- | --- | --- | --- |
+| gray（默认） | 黑白灰 | #121212 | #8A8A8A | #F2F2F2 |
+| deepForest | 深林苔 | #123524 | #8FA98F | #F3F1EA |
+| glacier | 冰川雾 | #1A3D50 | #6D9DB5 | #E8F1F5 |
+| navyGold | 海军金 | #0A2463 | #E8C547 | #F3F4F7 |
+| peachSea | 蜜桃海 | #344C63 | #E4B3A9 | #DDEAF2 |
+| electricBerry | 电音莓 | #124BA5 | #E6466A | #F8DCEB |
+| terracotta | 陶土现代 | #3B2A20 | #C1603F | #F5F0E8 |
+| forestNoir | 森林香 | #1A1A1A | #2D4A3E | #F5E6C8 |
+| skyWood | 晴空木 | #6E93AC | #C8AD88 | #F7F7F4 |
+| roseStone | 柔粉岩 | #5E5A57 | #D9A8AD | #F6EEE7 |
+
+派生规则（`lib/core/theme/app_schemes.dart` → `buildLightPalette` / `buildDarkPalette`）：
+
+- 卡面 = 底色与白混合 85%；tint 卡 = 66%；背景渐变 = 底色 → 底色提亮 30%
+- 正文 ink 取 hero 的色相/低明度（L 14%），次要文字 muted 取 L 42%
+- 语义色（支出偏红 #B0563F / 收入偏绿 #6B8E5A）混入 16%–22% hero，保持整体同色系
+- 过亮的 hero（如晴空木）压到 L 26%，保证白字可读
+- 强调色上的文字按对比度自动选白/近黑（`AppTheme.bestOnColor`）
+
+入口：设置 → 通用 → 配色方案（`lib/ui/settings/palette_page.dart`），每项左侧 3 个色球（主卡 / 强调 / 底色），选中用 `check_circle` 标记；选择存于 Hive `settings.paletteScheme`，重启恢复。
+
+测试：`test/palette_contrast_test.dart` 对 10 套 × 明暗两版断言 WCAG 对比度下限（ink ≥ 7、muted ≥ 4、语义色 ≥ 3、白字主卡 ≥ 7、强调色文字 ≥ 3）。

@@ -291,5 +291,20 @@
   "importErrorRowNotObject": "オブジェクトではありません",
   "importErrorType": "種別「{value}」を認識できません",
   "importErrorAmount": "金額が無効です「{value}」",
-  "importErrorDate": "日付が無効です「{value}」（yyyy-MM-dd 形式）"
+  "importErrorDate": "日付が無効です「{value}」（yyyy-MM-dd 形式）",
+  "settingsPalette": "カラーテーマ",
+  "settingsPaletteSubtitle": "3色の配色10種（既定はモノクロ）",
+  "paletteTitle": "カラーテーマ",
+  "paletteNote": "選択はすぐに反映され、ダークモードにも引き継がれます。グラフ・ボタン・選択状態はアクセント色に連動します。",
+  "paletteDefault": "既定",
+  "paletteGray": "モノクロ",
+  "paletteDeepForest": "深い苔",
+  "paletteGlacier": "氷河の霧",
+  "paletteNavyGold": "ネイビー＆ゴールド",
+  "palettePeachSea": "ピーチシー",
+  "paletteElectricBerry": "エレクトリックベリー",
+  "paletteTerracotta": "テラコッタモダン",
+  "paletteForestNoir": "フォレストノワール",
+  "paletteSkyWood": "スカイ＆ウッド",
+  "paletteRoseStone": "ローズストーン"
 }

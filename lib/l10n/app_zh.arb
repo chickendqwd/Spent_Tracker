@@ -644,5 +644,20 @@
         "type": "String"
       }
     }
-  }
+  },
+  "settingsPalette": "配色方案",
+  "settingsPaletteSubtitle": "10 套三色配色，默认黑白灰",
+  "paletteTitle": "配色方案",
+  "paletteNote": "切换后立即生效，并同步到深色模式；图表、按钮与选中态会跟随主色。",
+  "paletteDefault": "默认",
+  "paletteGray": "黑白灰",
+  "paletteDeepForest": "深林苔",
+  "paletteGlacier": "冰川雾",
+  "paletteNavyGold": "海军金",
+  "palettePeachSea": "蜜桃海",
+  "paletteElectricBerry": "电音莓",
+  "paletteTerracotta": "陶土现代",
+  "paletteForestNoir": "森林香",
+  "paletteSkyWood": "晴空木",
+  "paletteRoseStone": "柔粉岩"
 }

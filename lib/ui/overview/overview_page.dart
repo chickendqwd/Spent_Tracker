@@ -180,9 +180,14 @@ class _BalanceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     final l10n = context.l10n;
+    const onHero = Colors.white;
+    final onHeroMuted = Colors.white.withValues(alpha: 0.72);
+    final onHeroLine = Colors.white.withValues(alpha: 0.16);
 
     return SlantCard(
-      tint: true,
+      background: palette.primaryDeep,
+      accentColor: palette.accent,
+      elevation: 2.6,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,7 +198,7 @@ class _BalanceCard extends StatelessWidget {
                 width: 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: palette.primary,
+                  color: palette.accent,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -204,7 +209,7 @@ class _BalanceCard extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.2,
-                  color: palette.primaryDeep,
+                  color: onHero,
                 ),
               ),
             ],
@@ -215,17 +220,17 @@ class _BalanceCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               MoneyUtil.format(balance, symbol: symbol),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.8,
                 height: 1.1,
-                color: palette.ink,
+                color: onHero,
               ),
             ),
           ),
           const SizedBox(height: 14),
-          Container(height: 1, color: palette.divider),
+          Container(height: 1, color: onHeroLine),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -234,17 +239,19 @@ class _BalanceCard extends StatelessWidget {
                   label: l10n.overviewTotalExpense,
                   amount: expense,
                   symbol: symbol,
-                  color: palette.expense,
+                  color: onHero,
+                  labelColor: onHeroMuted,
                 ),
               ),
-              Container(width: 1, height: 30, color: palette.divider),
+              Container(width: 1, height: 30, color: onHeroLine),
               const SizedBox(width: 14),
               Expanded(
                 child: _MiniStat(
                   label: l10n.overviewTotalIncome,
                   amount: income,
                   symbol: symbol,
-                  color: palette.income,
+                  color: onHero,
+                  labelColor: onHeroMuted,
                 ),
               ),
             ],
@@ -261,12 +268,16 @@ class _MiniStat extends StatelessWidget {
     required this.amount,
     required this.symbol,
     required this.color,
+    this.labelColor,
   });
 
   final String label;
   final int amount;
   final String symbol;
   final Color color;
+
+  /// 标签文字颜色（深色主卡上使用半透明白）
+  final Color? labelColor;
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +290,7 @@ class _MiniStat extends StatelessWidget {
           style: TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
-            color: palette.muted,
+            color: labelColor ?? palette.muted,
           ),
         ),
         const SizedBox(height: 4),

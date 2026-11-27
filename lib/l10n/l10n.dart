@@ -7,6 +7,7 @@ import '../data/models/recurring_rule.dart';
 import '../data/models/transaction_type.dart';
 import '../core/analytics/trend_analytics.dart';
 import '../core/io/import_parser.dart';
+import '../core/theme/app_schemes.dart';
 import '../data/preset_categories.dart';
 import '../state/time_range_providers.dart';
 import 'generated/app_localizations.dart';
@@ -83,6 +84,20 @@ extension L10nLabels on AppLocalizations {
       monthTitle('${d.year}', '${d.month}');
 
   String yearLabelOf(int year) => yearLabel('$year');
+
+  /// 配色方案名称（10 套三色配色）
+  String paletteSchemeName(AppPaletteScheme scheme) => switch (scheme.id) {
+        'deepForest' => paletteDeepForest,
+        'glacier' => paletteGlacier,
+        'navyGold' => paletteNavyGold,
+        'peachSea' => palettePeachSea,
+        'electricBerry' => paletteElectricBerry,
+        'terracotta' => paletteTerracotta,
+        'forestNoir' => paletteForestNoir,
+        'skyWood' => paletteSkyWood,
+        'roseStone' => paletteRoseStone,
+        _ => paletteGray,
+      };
 }
 
 /// 分类展示名：预设分类跟随语言，自建分类保持用户输入的名称。
