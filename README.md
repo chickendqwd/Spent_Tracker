@@ -118,7 +118,7 @@ test/
 
 | Platform | File | Install |
 |---|---|---|
-| Android | [SpentTracker-3.4-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.4-android.apk) (arm64, 19 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
+| Android | [SpentTracker-3.4-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.4-android.apk) (arm64, 20 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
 | iOS | [SpentTracker-unsigned.ipa](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-unsigned.ipa) | Unsigned build: sign it on the iPhone with iLoader + SideStore (see below) |
 
 All builds are attached to [Releases](https://github.com/chickendqwd/Spent_Tracker/releases). The APK is signed with the development key, which is fine for testing but means a build produced on another machine cannot be installed over it.
