@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../data/models/currency.dart';
+import '../../l10n/l10n.dart';
 import '../../state/currency_providers.dart';
 
 /// 货币与汇率页（v3.3）：基准币种可切换，手动编辑为主，可选联网更新一次。
@@ -19,18 +20,20 @@ class CurrencyPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final currencies = ref.watch(currencyProvider);
     final base = ref.watch(baseCurrencyProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('货币与汇率')),
+      appBar: AppBar(title: Text(l10n.currencyTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Text(
-            '当前基准币种：${base.name}（${base.code}）。所有汇总（结余、趋势、预算、分类占比）'
-            '按基准币种显示；明细与详情保留每笔账目自己的币种。'
-            '汇率为「1 单位本币 = ? ${base.code}」，可手动修改或联网更新。',
+            l10n.currencyIntro(
+              currencyDisplayName(l10n, base),
+              base.code,
+            ),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
@@ -39,7 +42,7 @@ class CurrencyPage extends ConsumerWidget {
           const SizedBox(height: 16),
           FilledButton.tonalIcon(
             icon: const Icon(Icons.cloud_download_outlined),
-            label: const Text('联网更新汇率'),
+            label: Text(l10n.currencyRefresh),
             onPressed: () => _refreshRates(context, ref),
           ),
         ],
@@ -48,13 +51,14 @@ class CurrencyPage extends ConsumerWidget {
   }
 
   Future<void> _refreshRates(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
     try {
       final rates = await _fetchRates();
       final missing = _remoteCodes.where((c) => !rates.containsKey(c)).toList();
       if (rates.isEmpty) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('联网失败，已保留手动汇率')),
+          SnackBar(content: Text(l10n.currencyRefreshFailed)),
         );
         return;
       }
@@ -62,16 +66,17 @@ class CurrencyPage extends ConsumerWidget {
       if (context.mounted) {
         final updated =
             rates.entries.map((e) => '${e.key} ${e.value.toStringAsFixed(5)}');
-        final tail = missing.isEmpty
-            ? ''
-            : '；未获取到 ${missing.join('、')}，沿用本地汇率';
+        final tail =
+            missing.isEmpty ? '' : l10n.currencyMissing(missing.join('、'));
         messenger.showSnackBar(
-          SnackBar(content: Text('已更新：${updated.join('，')}$tail')),
+          SnackBar(
+            content: Text(l10n.currencyUpdated(updated.join('，')) + tail),
+          ),
         );
       }
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('联网失败，已保留手动汇率：$e')),
+        SnackBar(content: Text(l10n.currencyRefreshFailedWith('$e'))),
       );
     }
   }
@@ -119,6 +124,7 @@ class _CurrencyTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final isBase = currency.code == base.code;
     // 相对基准的汇率：1 本币 = ? 基准
     final perBase = rateToBaseOf(currencies, currency.code);
@@ -131,11 +137,15 @@ class _CurrencyTile extends ConsumerWidget {
           backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           child: Text(currency.symbol, style: const TextStyle(fontSize: 16)),
         ),
-        title: Text('${currency.name} (${currency.code})'),
+        title: Text('${currencyDisplayName(l10n, currency)} (${currency.code})'),
         subtitle: Text(
           isBase
-              ? '基准币种'
-              : '1 ${currency.code} = ${perBase.toStringAsFixed(decimals)} ${base.code}',
+              ? l10n.currencyBaseLabel
+              : l10n.currencyRateLine(
+                  currency.code,
+                  perBase.toStringAsFixed(decimals),
+                  base.code,
+                ),
         ),
         trailing: isBase
             ? Row(
@@ -143,11 +153,14 @@ class _CurrencyTile extends ConsumerWidget {
                 children: [
                   Icon(Icons.star, color: context.palette.accent, size: 18),
                   const SizedBox(width: 4),
-                  Text('基准', style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    l10n.currencyBaseBadge,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ],
               )
             : PopupMenuButton<String>(
-                tooltip: '更多操作',
+                tooltip: l10n.commonOverflowMenu,
                 onSelected: (v) {
                   if (v == 'rate') {
                     _editRate(context, ref);
@@ -158,13 +171,13 @@ class _CurrencyTile extends ConsumerWidget {
                 itemBuilder: (_) => [
                   // SGD 是换算锚点，其汇率恒为 1，不提供编辑入口
                   if (currency.code != 'SGD')
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'rate',
-                      child: Text('修改汇率'),
+                      child: Text(l10n.currencyEditRate),
                     ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'base',
-                    child: Text('设为基准币种'),
+                    child: Text(l10n.currencySetAsBase),
                   ),
                 ],
               ),
@@ -173,23 +186,24 @@ class _CurrencyTile extends ConsumerWidget {
   }
 
   Future<void> _confirmSetBase(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('把 ${currency.code} 设为基准币种？'),
+        title: Text(l10n.currencyConfirmBaseTitle(currency.code)),
         content: Text(
-          '汇总（结余、趋势、预算、分类占比）将改为按 ${currency.name} 显示。\n'
-          '历史账目与已录预算的存储金额不会改写，只是换算后展示；'
-          '明细仍显示每笔账目自己的币种。',
+          l10n.currencyConfirmBaseBody(
+            currencyDisplayName(l10n, currency),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('切换'),
+            child: Text(l10n.currencySwitch),
           ),
         ],
       ),
@@ -199,6 +213,8 @@ class _CurrencyTile extends ConsumerWidget {
   }
 
   Future<void> _editRate(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final baseCurrency = base;
     final baseRate = baseRateOf(currencies);
     // 展示值 = 相对基准；保存值 = 写入 Hive 的「对 SGD」汇率
     final perBase = rateToBaseOf(currencies, currency.code);
@@ -209,7 +225,7 @@ class _CurrencyTile extends ConsumerWidget {
     final value = await showDialog<double>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('修改 ${currency.code} 汇率'),
+        title: Text(l10n.currencyEditRateTitle(currency.code)),
         content: TextField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -217,27 +233,30 @@ class _CurrencyTile extends ConsumerWidget {
             FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
           ],
           decoration: InputDecoration(
-            labelText: '1 ${currency.code} = ? ${base.code}',
+            labelText: l10n.currencyRateInputLabel(
+              currency.code,
+              baseCurrency.code,
+            ),
             border: const OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('取消'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () {
               final v = double.tryParse(controller.text);
               if (v == null || v <= 0) {
                 messenger.showSnackBar(
-                  const SnackBar(content: Text('请输入正数汇率')),
+                  SnackBar(content: Text(l10n.currencyPositiveRate)),
                 );
                 return;
               }
               Navigator.of(ctx).pop(v);
             },
-            child: const Text('保存'),
+            child: Text(l10n.commonSave),
           ),
         ],
       ),

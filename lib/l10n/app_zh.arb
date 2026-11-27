@@ -1,0 +1,637 @@
+{
+  "@@locale": "zh",
+  "appTitle": "Spent_Tracker",
+  "curSgd": "新加坡元",
+  "curCny": "人民币",
+  "curMyr": "马来西亚林吉特",
+  "curJpy": "日元",
+  "commonCancel": "取消",
+  "commonSave": "保存",
+  "commonDelete": "删除",
+  "commonEdit": "编辑",
+  "commonMore": "更多…",
+  "commonCustom": "自定义",
+  "commonAmount": "金额",
+  "commonCurrency": "币种",
+  "commonCategory": "分类",
+  "commonNote": "备注",
+  "commonDate": "日期",
+  "commonType": "类型",
+  "commonUncategorized": "未分类",
+  "commonUnknown": "未知",
+  "commonNone": "暂无",
+  "commonUnitEntries": "{count} 笔",
+  "@commonUnitEntries": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "commonOverflowMenu": "更多操作",
+  "navOverview": "总览",
+  "navTransactions": "明细",
+  "navSettings": "设置",
+  "fabAdd": "记一笔",
+  "typeExpense": "支出",
+  "typeIncome": "收入",
+  "budgetTypeTotal": "总预算",
+  "budgetTypeCategory": "分类预算",
+  "freqWeekly": "每周",
+  "freqMonthly": "每月",
+  "freqYearly": "每年",
+  "weekdayMonth": "周一",
+  "weekdayTue": "周二",
+  "weekdayWed": "周三",
+  "weekdayThu": "周四",
+  "weekdayFri": "周五",
+  "weekdaySat": "周六",
+  "weekdaySun": "周日",
+  "weekdayCharMon": "一",
+  "weekdayCharTue": "二",
+  "weekdayCharWed": "三",
+  "weekdayCharThu": "四",
+  "weekdayCharFri": "五",
+  "weekdayCharSat": "六",
+  "weekdayCharSun": "日",
+  "dateListHeader": "{month}月{day}日 {weekday}",
+  "@dateListHeader": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      },
+      "weekday": {
+        "type": "String"
+      }
+    }
+  },
+  "monthTitle": "{year}年{month}月",
+  "@monthTitle": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "yearLabel": "{year} 年",
+  "@yearLabel": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "monthShort": "{month} 月",
+  "@monthShort": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "overviewTitle": "总览",
+  "overviewAnnualTooltip": "年度报告",
+  "overviewTotalExpense": "总支出",
+  "overviewTotalIncome": "总收入",
+  "overviewBalance": "结余",
+  "overviewMonthlyBudget": "本月预算",
+  "overviewOverBudget": "已超出预算",
+  "overviewTrendTitle": "收支趋势",
+  "overviewTodayDue": "今日待记 {count} 笔，点按预填录入",
+  "@overviewTodayDue": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "overviewCategoryAnalysis": "分类分析",
+  "overviewNoExpenseInRange": "区间内暂无支出",
+  "overviewNoIncomeInRange": "区间内暂无收入",
+  "overviewRecent": "最近记录",
+  "overviewRecentEmpty": "区间内还没有记录，点右下角「+」记一笔吧",
+  "overviewViewAll": "查看全部",
+  "trendThisWeek": "本周",
+  "trendThisMonth": "本月",
+  "trendThreeMonths": "近3月",
+  "trendSixMonths": "近6月",
+  "trendTwelveMonths": "近12月",
+  "trendMoreRanges": "更多区间",
+  "rangeThisWeek": "本周",
+  "rangeThisMonth": "本月",
+  "rangeLastMonth": "上月",
+  "rangeLast7Days": "近7天",
+  "rangeCustom": "自定义",
+  "transactionsTitle": "交易明细",
+  "transactionsSearchHint": "搜索备注、分类或金额",
+  "transactionsAll": "全部",
+  "transactionsAllCategories": "全部分类",
+  "transactionsNoMatch": "没有找到匹配的账目",
+  "entryAddTitle": "记一笔",
+  "entryEditTitle": "编辑账目",
+  "entryAmountEmpty": "请输入金额",
+  "entryAmountInvalid": "金额格式无效，请输入数字（最多 7 位整数、2 位小数）",
+  "entryAmountTooLong": "整数最多 7 位、小数最多 2 位",
+  "entryAmountPositive": "金额必须大于 0",
+  "entrySelectCategory": "请选择分类",
+  "entryAddCategoryFirst": "请先在「设置 → 分类管理」中添加该类型分类",
+  "entrySaveChanges": "保存修改",
+  "entryConfirmEditTitle": "确认保存修改？",
+  "entryConfirmEditBody": "保存后将覆盖原有记录。",
+  "entryConfirmSave": "确认保存",
+  "entryOverCategoryBudget": "本月该分类将超出预算（{amount}）",
+  "@entryOverCategoryBudget": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "entryOverTotalBudget": "本月总支出将超出预算（{amount}）",
+  "@entryOverTotalBudget": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "detailTitle": "账目详情",
+  "detailDeleteTitle": "删除这笔记录？",
+  "detailDeleteBody": "{type} {amount}，删除后不可恢复。",
+  "@detailDeleteBody": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsTitle": "设置",
+  "settingsGroupGeneral": "通用",
+  "settingsAppearance": "外观",
+  "settingsAppearanceSubtitle": "跟随系统 / 浅色 / 深色",
+  "settingsLanguage": "语言",
+  "settingsLanguageSubtitle": "跟随系统 / 中文 / English / 日本語",
+  "settingsGroupBookkeeping": "记账管理",
+  "settingsCategories": "分类管理",
+  "settingsCategoriesSubtitle": "预设 + 自定义分类",
+  "settingsBudgets": "预算设置",
+  "settingsBudgetsSubtitle": "月度总预算与分类预算",
+  "settingsRecurring": "周期记账",
+  "settingsRecurringSubtitle": "每周 / 每月 / 每年待记提醒",
+  "settingsGroupAnalysis": "分析",
+  "settingsAnnual": "年度报告",
+  "settingsAnnualSubtitle": "全年收支、月度柱状图与分类排行",
+  "settingsGroupData": "数据",
+  "settingsCurrency": "货币与汇率",
+  "settingsCurrencySubtitle": "切换基准币种，汇率可手动或联网更新",
+  "settingsExport": "数据导出",
+  "settingsExportSubtitle": "导出 CSV / JSON 备份",
+  "settingsImport": "数据导入",
+  "settingsImportSubtitle": "从 CSV / JSON 备份恢复（追加，自动跳过重复）",
+  "appearanceTitle": "外观",
+  "appearanceThemeSystem": "跟随系统",
+  "appearanceThemeSystemSub": "随手机/电脑的深浅色设置自动切换",
+  "appearanceThemeLight": "浅色",
+  "appearanceThemeLightSub": "始终使用浅色主题",
+  "appearanceThemeDark": "深色",
+  "appearanceThemeDarkSub": "始终使用深色主题",
+  "appearanceNote": "深色模式下的图表、金额颜色会自动适配背景亮度。",
+  "languageTitle": "语言",
+  "languageFollowSystem": "跟随系统",
+  "languageSystemSub": "随手机/电脑的系统语言自动切换",
+  "languageChinese": "中文",
+  "languageEnglish": "English",
+  "languageJapanese": "日本語",
+  "languageNote": "切换语言后界面与预设分类名称会立即更新；自定义分类名、备注等用户内容保持原文。",
+  "categoriesTitle": "分类管理",
+  "categoriesExpenseTab": "支出分类",
+  "categoriesIncomeTab": "收入分类",
+  "categoriesPresetLabel": "预设分类",
+  "categoriesAddExpense": "新增支出分类",
+  "categoriesAddIncome": "新增收入分类",
+  "categoriesNewTitle": "新增分类",
+  "categoriesEditTitle": "编辑分类",
+  "categoriesDeleteTitle": "删除分类「{name}」？",
+  "@categoriesDeleteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "categoriesDeleteBody": "该分类下的历史账目将变为「未分类」，此操作不可恢复。",
+  "categoriesNameLabel": "分类名称",
+  "categoriesNameHint": "如：宠物、健身",
+  "categoriesNameEmpty": "请输入分类名称",
+  "categoriesIconLabel": "图标",
+  "categoriesCustomIconLabel": "自定义图标（可选）",
+  "categoriesCustomIconHint": "输入 1 个 emoji，如 🐹",
+  "categoriesCustomIconInvalid": "请输入 1 个 emoji（最多 2 个字符）",
+  "categoriesCurrent": "当前：",
+  "categoriesBelongsTo": "所属类型：{type}",
+  "@categoriesBelongsTo": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetsTitle": "预算设置",
+  "budgetsCurrentMonth": "当前月：{month}",
+  "@budgetsCurrentMonth": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetsIntro": "金额按当前基准币种（{name}）录入与显示。当月未设置预算时，自动沿用最近一个设置过预算的月份；想要「不设限制」请删除该月预算。",
+  "@budgetsIntro": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetsEmpty": "本月尚未设置预算\n点右下角「+」添加",
+  "budgetsAdd": "新增预算",
+  "budgetsCategoryWith": "分类预算 · {name}",
+  "@budgetsCategoryWith": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetsMonthLabel": "所属月：{month}",
+  "@budgetsMonthLabel": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetsDeleteTitle": "删除这笔预算？",
+  "budgetsDeleteBody": "删除后仅影响后续，不影响历史账目。",
+  "budgetsDialogTitle": "预算",
+  "budgetsAmountLabel": "金额（{code}）",
+  "@budgetsAmountLabel": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetsInvalidAmount": "请输入有效金额",
+  "budgetsAddExpenseFirst": "请先添加支出分类",
+  "recurringTitle": "周期记账",
+  "recurringIntro": "设置周期规则后，到期日在总览页出现「今日待记」提示条，点击预填录入并手动确认入账（不自动记账）。",
+  "recurringEmpty": "尚未设置周期规则\n点右下角「+」添加",
+  "recurringAdd": "新增规则",
+  "recurringActive": "启用中",
+  "recurringInactive": "已停用",
+  "recurringEditTooltip": "编辑",
+  "recurringDeleteTitle": "删除这条规则？",
+  "recurringDeleteBody": "删除后仅影响后续提醒，不影响已记账目。",
+  "recurringDialogTitle": "周期规则",
+  "recurringFrequencyLabel": "频率",
+  "recurringWeekdayLabel": "每周几",
+  "recurringWeekdayOption": "周{char}",
+  "@recurringWeekdayOption": {
+    "placeholders": {
+      "char": {
+        "type": "String"
+      }
+    }
+  },
+  "recurringDayLabel": "几号（1-31）",
+  "recurringDayHelper": "超过当月天数的日期按月末处理",
+  "recurringMonthEndNote": "小月/平年按月末：如 31 号在 4 月记 30 日、2 月记 28 日",
+  "recurringStartDate": "开始日期：{date}",
+  "@recurringStartDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "recurringStartLabel": "开始 {date}",
+  "@recurringStartLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "recurringNoteOptional": "备注（可选）",
+  "recurringAddCategoryFirst": "请先添加该类型分类",
+  "recurringDescWeekly": "每周 {weekday}",
+  "@recurringDescWeekly": {
+    "placeholders": {
+      "weekday": {
+        "type": "String"
+      }
+    }
+  },
+  "recurringDescMonthly": "每月 {day} 号",
+  "@recurringDescMonthly": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "recurringDescYearly": "每年 {month} 月 {day} 号",
+  "@recurringDescYearly": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "recurringNotCategorized": "未分类",
+  "annualTitle": "年度报告",
+  "annualYearlyExpense": "全年支出",
+  "annualYearlyIncome": "全年收入",
+  "annualBalance": "结余",
+  "annualRecordCount": "记账笔数",
+  "annualAvgExpense": "月均支出",
+  "annualPeakMonth": "支出最高月",
+  "annualNoRecords": "该年暂无记录",
+  "annualChartTitle": "月度收支（{year} 年）",
+  "@annualChartTitle": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "annualUnit": "单位：{symbol}",
+  "@annualUnit": {
+    "placeholders": {
+      "symbol": {
+        "type": "String"
+      }
+    }
+  },
+  "annualCategoryRanking": "分类排行",
+  "annualNoExpense": "该年暂无支出",
+  "annualNoIncome": "该年暂无收入",
+  "annualPrevYear": "上一年",
+  "annualNextYear": "下一年",
+  "currencyTitle": "货币与汇率",
+  "currencyIntro": "当前基准币种：{name}（{code}）。所有汇总（结余、趋势、预算、分类占比）按基准币种显示；明细与详情保留每笔账目自己的币种。汇率为「1 单位本币 = ? {code}」，可手动修改或联网更新。",
+  "@currencyIntro": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "currencyRefresh": "联网更新汇率",
+  "currencyRefreshFailed": "联网失败，已保留手动汇率",
+  "currencyRefreshFailedWith": "联网失败，已保留手动汇率：{error}",
+  "@currencyRefreshFailedWith": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "currencyUpdated": "已更新：{list}",
+  "@currencyUpdated": {
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "currencyMissing": "；未获取到 {codes}，沿用本地汇率",
+  "@currencyMissing": {
+    "placeholders": {
+      "codes": {
+        "type": "String"
+      }
+    }
+  },
+  "currencyBaseLabel": "基准币种",
+  "currencyBaseBadge": "基准",
+  "currencyRateLine": "1 {code} = {rate} {base}",
+  "@currencyRateLine": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      },
+      "base": {
+        "type": "String"
+      }
+    }
+  },
+  "currencySetAsBase": "设为基准币种",
+  "currencyEditRate": "修改汇率",
+  "currencyConfirmBaseTitle": "把 {code} 设为基准币种？",
+  "@currencyConfirmBaseTitle": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "currencyConfirmBaseBody": "汇总（结余、趋势、预算、分类占比）将改为按 {name} 显示。\n历史账目与已录预算的存储金额不会改写，只是换算后展示；明细仍显示每笔账目自己的币种。",
+  "@currencyConfirmBaseBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "currencySwitch": "切换",
+  "currencyEditRateTitle": "修改 {code} 汇率",
+  "@currencyEditRateTitle": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "currencyRateInputLabel": "1 {code} = ? {base}",
+  "@currencyRateInputLabel": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "base": {
+        "type": "String"
+      }
+    }
+  },
+  "currencyPositiveRate": "请输入正数汇率",
+  "importTitle": "数据导入",
+  "importRestore": "从备份文件恢复",
+  "importIntro": "支持本应用导出的 CSV / JSON。导入为「追加」：不会删除或覆盖现有账目；同类型、同金额、同币种、同日期、同备注、同分类的记录会被视为重复并跳过。",
+  "importChooseFile": "选择 CSV / JSON 文件",
+  "importEmptyFile": "该文件为空",
+  "importReadFailed": "读取失败：{error}",
+  "@importReadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importConfirmTitle": "确认导入？",
+  "importConfirmBody": "将追加 {count} 笔账目；跳过重复 {dups} 笔。导入不会删除或覆盖现有记录。",
+  "@importConfirmBody": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "dups": {
+        "type": "String"
+      }
+    }
+  },
+  "importAction": "导入",
+  "importDoneCount": "已导入 {count} 笔",
+  "@importDoneCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "importSkipped": "，跳过重复 {count} 笔",
+  "@importSkipped": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "importUnmatchedSuffix": "，{count} 笔分类未匹配已记为未分类",
+  "@importUnmatchedSuffix": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "importFailed": "导入失败：{error}",
+  "@importFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importImportable": "可导入",
+  "importSkippedDuplicates": "重复跳过",
+  "importParseFailed": "格式失败",
+  "importUnmatched": "分类未匹配（将记为未分类）",
+  "importFailureDetails": "失败明细（最多显示 5 条）",
+  "importRowIssue": "第 {row} 行：{reason}",
+  "@importRowIssue": {
+    "placeholders": {
+      "row": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "importNoNewRecords": "没有可导入的新记录",
+  "importConfirmCount": "确认导入 {count} 笔",
+  "@importConfirmCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "importSuccess": "导入完成，明细与总览已刷新",
+  "importTip": "提示：先在「数据导出」里导出一份当前数据，再导入旧备份，可最大程度避免误操作带来的数据混乱。",
+  "importSelectedFile": "已选择文件",
+  "exportTitle": "数据导出",
+  "exportCount": "共 {count} 笔账目",
+  "@exportCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "exportIntro": "导出为 CSV 或 JSON 备份文件，可保存到「下载」或发送。导出的文件可在「数据导入」中恢复。",
+  "exportCsv": "导出 CSV",
+  "exportJson": "导出 JSON",
+  "exportFailed": "导出失败：{error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importErrorUnsupported": "不支持的文件类型：{name}（仅支持 .csv / .json）",
+  "@importErrorUnsupported": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "importErrorJsonInvalid": "JSON 格式无法解析，请确认文件完整",
+  "importErrorJsonNotArray": "JSON 备份应为账目数组（[...]）",
+  "importErrorCsvEmpty": "CSV 文件为空",
+  "importErrorCsvMissing": "CSV 缺少必需列：{columns}（表头需包含 type, amount, date）",
+  "@importErrorCsvMissing": {
+    "placeholders": {
+      "columns": {
+        "type": "String"
+      }
+    }
+  },
+  "importErrorRowNotObject": "不是对象",
+  "importErrorType": "无法识别类型「{value}」",
+  "@importErrorType": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "importErrorAmount": "金额无效「{value}」",
+  "@importErrorAmount": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "importErrorDate": "日期无效「{value}」（应为 yyyy-MM-dd）",
+  "@importErrorDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  }
+}

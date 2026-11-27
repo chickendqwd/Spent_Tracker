@@ -6,6 +6,7 @@ import '../../core/utils/date_util.dart';
 import '../../core/utils/money_util.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/transaction_type.dart';
+import '../../l10n/l10n.dart';
 import '../../state/budget_providers.dart';
 import '../../state/category_providers.dart';
 import '../../state/currency_providers.dart';
@@ -111,6 +112,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
   /// 保存后将超出预算的轻提示文本；无则 null。读取保存前状态判断「将超出」。
   String? _overBudgetWarning(int cents) {
+    final l10n = context.l10n;
     final currencies = ref.read(currencyProvider);
     final baseSymbol = ref.read(baseCurrencyProvider).symbol;
     final baseCents = toBaseCents(currencies, cents, _currency);
@@ -125,34 +127,37 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         final used = byCat[_categoryId] ?? 0;
         final budgetBase = budgetCentsInBase(currencies, budget.amount);
         if (used + baseCents > budgetBase) {
-          return '本月该分类将超出预算（${MoneyUtil.format(budgetBase, symbol: '$baseSymbol ')}）';
+          return l10n.entryOverCategoryBudget(
+            MoneyUtil.format(budgetBase, symbol: '$baseSymbol '),
+          );
         }
       }
     }
     if (totalBudget != null) {
       final budgetBase = budgetCentsInBase(currencies, totalBudget.amount);
       if (monthExpense + baseCents > budgetBase) {
-        return '本月总支出将超出预算（${MoneyUtil.format(budgetBase, symbol: '$baseSymbol ')}）';
+        return l10n.entryOverTotalBudget(
+          MoneyUtil.format(budgetBase, symbol: '$baseSymbol '),
+        );
       }
     }
     return null;
   }
 
   Future<void> _save() async {
+    final l10n = context.l10n;
     final text = _amountController.text.trim();
     final cents = MoneyUtil.parseToCents(text);
     if (text.isEmpty) {
-      setState(() => _amountError = '请输入金额');
+      setState(() => _amountError = l10n.entryAmountEmpty);
       return;
     }
     if (cents == null) {
-      setState(
-        () => _amountError = '金额格式无效，请输入数字（最多 7 位整数、2 位小数）',
-      );
+      setState(() => _amountError = l10n.entryAmountInvalid);
       return;
     }
     if (cents <= 0) {
-      setState(() => _amountError = '金额必须大于 0');
+      setState(() => _amountError = l10n.entryAmountPositive);
       return;
     }
     // 与 UI 高亮一致的分类：未选择或原分类已删除时默认取该类型第一个
@@ -178,16 +183,16 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('确认保存修改？'),
-          content: const Text('保存后将覆盖原有记录。'),
+          title: Text(l10n.entryConfirmEditTitle),
+          content: Text(l10n.entryConfirmEditBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('取消'),
+              child: Text(l10n.commonCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('确认保存'),
+              child: Text(l10n.entryConfirmSave),
             ),
           ],
         ),
@@ -225,6 +230,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final categories = ref.watch(categoryProvider);
     final currencies = ref.watch(currencyProvider);
     final currencySymbol = symbolOf(currencies, _currency);
@@ -254,7 +260,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   Row(
                     children: [
                       Text(
-                        _isEdit ? '编辑账目' : '记一笔',
+                        _isEdit ? l10n.entryEditTitle : l10n.entryAddTitle,
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const Spacer(),
@@ -267,14 +273,14 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   const SizedBox(height: 4),
                   // 第 1 步：类型 + 金额（金额键盘优先，自动聚焦）
                   SegmentedButton<TransactionType>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                         value: TransactionType.expense,
-                        label: Text('支出'),
+                        label: Text(l10n.typeExpense),
                       ),
                       ButtonSegment(
                         value: TransactionType.income,
-                        label: Text('收入'),
+                        label: Text(l10n.typeIncome),
                       ),
                     ],
                     selected: {_type},
@@ -292,7 +298,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                         onRejected: () {
                           if (_amountError == null) {
                             setState(
-                              () => _amountError = '整数最多 7 位、小数最多 2 位',
+                              () => _amountError = l10n.entryAmountTooLong,
                             );
                           }
                         },
@@ -308,7 +314,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                       fontWeight: FontWeight.w600,
                     ),
                     decoration: InputDecoration(
-                      labelText: '金额',
+                      labelText: l10n.commonAmount,
                       prefixText: currencySymbol,
                       errorText: _amountError,
                       border: const OutlineInputBorder(),
@@ -318,16 +324,18 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   // 币种（v3.3）：默认当前基准币种，可切换
                   DropdownButtonFormField<String>(
                     initialValue: _currency,
-                    decoration: const InputDecoration(
-                      labelText: '币种',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.commonCurrency,
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     items: [
                       for (final c in currencies)
                         DropdownMenuItem(
                           value: c.code,
-                          child: Text('${c.symbol} ${c.name}'),
+                          child: Text(
+                            '${c.symbol} ${currencyDisplayName(l10n, c)}',
+                          ),
                         ),
                     ],
                     onChanged: (v) => setState(
@@ -337,12 +345,13 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   ),
                   const SizedBox(height: 20),
                   // 第 2 步：分类（默认选中第一个）
-                  Text('分类', style: Theme.of(context).textTheme.titleSmall),
+                  Text(l10n.commonCategory,
+                      style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 8),
                   if (typeCategories.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: Text('请先在「设置 → 分类管理」中添加该类型分类'),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(l10n.entryAddCategoryFirst),
                     )
                   else
                     Wrap(
@@ -355,7 +364,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                               c.displayIcon,
                               style: const TextStyle(fontSize: 16),
                             ),
-                            label: Text(c.name),
+                            label: Text(categoryDisplayName(l10n, c)),
                             selected: c.key == effectiveCategoryId,
                             onSelected: (_) => setState(() {
                               _categoryId = c.key as int;
@@ -368,7 +377,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
-                        '请选择分类',
+                        l10n.entrySelectCategory,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.error,
                           fontSize: 12,
@@ -380,7 +389,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.calendar_today_outlined),
-                    title: Text('日期：${DateUtil.listHeader(_date)}'),
+                    title: Text(
+                      '${l10n.commonDate}：${l10n.dateHeader(_date)}',
+                    ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
                       final picked = await showDatePicker(
@@ -395,9 +406,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   // 备注（可选）
                   TextField(
                     controller: _noteController,
-                    decoration: const InputDecoration(
-                      labelText: '备注（可选）',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.recurringNoteOptional,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -412,7 +423,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               width: double.infinity,
               child: FilledButton(
                 onPressed: _save,
-                child: Text(_isEdit ? '保存修改' : '保存'),
+                child: Text(_isEdit ? l10n.entrySaveChanges : l10n.commonSave),
               ),
             ),
           ),

@@ -69,6 +69,14 @@
 - **新增账目默认跟随基准**：换到 JPY 后新记一笔默认币种就是 JPY，不用每次手动选
 - **日元符号改「円」**：与人民币的 ¥ 区分开；已存过的旧数据显示时自动迁移成「円」
 
+### v3.4 — 三语界面、更稳的导入、总览「查看全部」
+- **中 / 英 / 日三语界面**：默认跟随系统语言，设置 → 语言可固定为「跟随系统 / 中文 / English / 日本語」；切换后立即生效，不用重启
+- **预设分类跟随语言**：13 个预设分类各带一个稳定标识 `presetKey`（food、transport…），展示名按当前语言取，账目归属不变；旧数据库启动时自动补齐标识，自建分类仍显示你自己输入的名称
+- **导出用中性标识**：CSV / JSON 备份的 `type` 写成 `expense` / `income`，分类写 `categoryKey`（预设标识），同时保留人可读的 `typeName` / `categoryName`。英文备份导进中文界面（或反过来）仍能落回原分类，不会变成「未分类」；旧备份（中文类型 + 单个 `category` 列）继续兼容
+- **GBK 编码 CSV 导入**：读取顺序为 UTF-8 BOM → UTF-16 BOM → 严格 UTF-8 → GBK → 容错 UTF-8，Windows Excel 导出的中文 CSV 不再乱码；导入失败改为结构化错误码（不支持的文件 / JSON 损坏 / CSV 为空 / 缺列 / 行内格式错误），文案随界面语言
+- **搜索覆盖更全**：备注、分类在当前语言下的展示名、金额的显示值、币种代码与符号都按「包含」匹配（不区分大小写）；输入能解析为金额时额外做金额精确匹配；导入去重键也改成语言无关
+- **总览「查看全部」**：最近记录卡片右上角新增入口，点击进入完整明细页；卡片本身仍只显示最近 5 条
+
 ## 技术栈
 
 | 用途 | 选型 |
@@ -111,7 +119,7 @@ test/
 
 | 平台 | 文件 | 安装方式 |
 |---|---|---|
-| 安卓 | [SpentTracker-3.3.2-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.3.2-android.apk)（arm64，19 MB） | 传到手机直接打开安装，按提示允许「安装未知来源应用」 |
+| 安卓 | [SpentTracker-3.4-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.4-android.apk)（arm64，19 MB） | 传到手机直接打开安装，按提示允许「安装未知来源应用」 |
 | iOS | [SpentTracker-unsigned.ipa](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-unsigned.ipa) | 未签名包，需用 iLoader + SideStore 在手机上签名（见下文） |
 
 所有安装包都挂在 [Releases](https://github.com/chickendqwd/Spent_Tracker/releases)。APK 用开发密钥签名，适合测试；换一台机器重新构建的版本无法覆盖安装。
@@ -146,7 +154,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 ```bash
 flutter analyze   # 静态检查
-flutter test      # 62 个测试：51 个逻辑/仓库单测 + 9 个 UI 交互测试 + 2 个外观持久化测试
+flutter test      # 67 个测试：54 个逻辑/仓库单测 + 11 个 UI 交互测试 + 2 个外观持久化测试
 ```
 
 当前状态：`flutter analyze` 无问题；`flutter test` 62/62 通过。
@@ -174,6 +182,7 @@ flutter test      # 62 个测试：51 个逻辑/仓库单测 + 9 个 UI 交互�
 | `v3.3` | 可切换基准币种与交叉汇率换算、JPY 预设与联网更新、币种符号统一、预算沿用规则写入界面 |
 | `v3.3.1` | 趋势默认本周，周视图日期下补单字星期 |
 | `v3.3.2` | 趋势按周/月显示完整区间且折线停在今天、切换基准后星标与符号即时刷新、新增账目默认跟随基准、日元符号改「円」 |
+| `v3.4` | 中英日三语界面、预设分类跟随语言、导出中性标识可跨语言导入、GBK 编码 CSV 导入、搜索覆盖分类名/币种/金额、总览「查看全部」 |
 
 ## 已知限制
 

@@ -7,6 +7,7 @@ import '../../core/utils/date_util.dart';
 import '../../core/utils/money_util.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/transaction_type.dart';
+import '../../l10n/l10n.dart';
 import '../../state/category_providers.dart';
 import '../../state/currency_providers.dart';
 import '../../state/transaction_providers.dart';
@@ -34,27 +35,30 @@ class TransactionDetailSheet extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     final t = transaction;
     final symbol = symbolOf(ref.read(currencyProvider), t.currency);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除这笔记录？'),
+        title: Text(l10n.detailDeleteTitle),
         content: Text(
-          '${t.transactionType == TransactionType.expense ? '支出' : '收入'} '
-          '${MoneyUtil.format(t.amount, symbol: symbol)}，删除后不可恢复。',
+          l10n.detailDeleteBody(
+            l10n.txType(t.transactionType),
+            MoneyUtil.format(t.amount, symbol: symbol),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('删除'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -66,6 +70,7 @@ class TransactionDetailSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final categories = ref.watch(categoryProvider);
     final category = transaction.categoryId == null
         ? null
@@ -81,13 +86,16 @@ class TransactionDetailSheet extends ConsumerWidget {
         : AppConstants.incomePrefix;
 
     final rows = <(String, String)>[
-      ('类型', transaction.transactionType.label),
-      ('金额', MoneyUtil.format(transaction.amount, symbol: symbol)),
-      ('币种', transaction.currency),
-      ('分类', category?.name ?? '未分类'),
-      ('日期', DateUtil.listHeader(DateUtil.fromDayKey(transaction.date))),
+      (l10n.commonType, l10n.txType(transaction.transactionType)),
+      (l10n.commonAmount, MoneyUtil.format(transaction.amount, symbol: symbol)),
+      (l10n.commonCurrency, transaction.currency),
+      (l10n.commonCategory, categoryDisplayName(l10n, category)),
+      (
+        l10n.commonDate,
+        l10n.dateHeader(DateUtil.fromDayKey(transaction.date)),
+      ),
       if (transaction.note != null && transaction.note!.isNotEmpty)
-        ('备注', transaction.note!),
+        (l10n.commonNote, transaction.note!),
     ];
 
     return Padding(
@@ -98,7 +106,8 @@ class TransactionDetailSheet extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Text('账目详情', style: Theme.of(context).textTheme.titleLarge),
+              Text(l10n.detailTitle,
+                  style: Theme.of(context).textTheme.titleLarge),
               const Spacer(),
               IconButton(
                 icon: const Icon(Icons.close),
@@ -153,7 +162,7 @@ class TransactionDetailSheet extends ConsumerWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.edit_outlined),
-                  label: const Text('编辑'),
+                  label: Text(l10n.commonEdit),
                   onPressed: () => _edit(context),
                 ),
               ),
@@ -164,7 +173,7 @@ class TransactionDetailSheet extends ConsumerWidget {
                     backgroundColor: Theme.of(context).colorScheme.error,
                   ),
                   icon: const Icon(Icons.delete_outline),
-                  label: const Text('删除'),
+                  label: Text(l10n.commonDelete),
                   onPressed: () => _delete(context, ref),
                 ),
               ),

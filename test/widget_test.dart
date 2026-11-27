@@ -12,7 +12,14 @@ import 'package:spent_tracker/data/db/currency_repository.dart';
 import 'package:spent_tracker/data/db/database.dart';
 import 'package:spent_tracker/data/models/category.dart';
 import 'package:spent_tracker/data/models/transaction.dart';
+import 'package:spent_tracker/state/language_providers.dart';
 import 'package:spent_tracker/state/theme_providers.dart';
+
+/// 测试固定中文界面：断言文案不随宿主机语言（可能解析为 en）漂移。
+class _ZhLanguage extends LanguageNotifier {
+  @override
+  Locale? build() => const Locale('zh');
+}
 
 void main() {
   // 普通 test 与 testWidgets 混跑，确保 binding 在两者中都可用的 Hive close
@@ -38,7 +45,12 @@ void main() {
     tester.view.physicalSize = const Size(800, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(const ProviderScope(child: SpentTrackerApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [languageProvider.overrideWith(_ZhLanguage.new)],
+        child: const SpentTrackerApp(),
+      ),
+    );
     await tester.pumpAndSettle();
   }
 

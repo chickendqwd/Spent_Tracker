@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/l10n.dart';
 import '../../state/time_range_providers.dart';
 
 /// 时间范围切换器（v2）：本周 / 本月 / 上月 / 近7天 + 自定义区间。
@@ -10,6 +11,7 @@ class TimeRangeSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final range = ref.watch(timeRangeProvider);
     final isCustom = range.kind == TimeRangeKind.custom;
 
@@ -22,11 +24,23 @@ class TimeRangeSelector extends ConsumerWidget {
               visualDensity: VisualDensity.compact,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            segments: const [
-              ButtonSegment(value: TimeRangeKind.thisWeek, label: Text('本周')),
-              ButtonSegment(value: TimeRangeKind.thisMonth, label: Text('本月')),
-              ButtonSegment(value: TimeRangeKind.lastMonth, label: Text('上月')),
-              ButtonSegment(value: TimeRangeKind.last7Days, label: Text('近7天')),
+            segments: [
+              ButtonSegment(
+                value: TimeRangeKind.thisWeek,
+                label: Text(l10n.timeRange(TimeRangeKind.thisWeek)),
+              ),
+              ButtonSegment(
+                value: TimeRangeKind.thisMonth,
+                label: Text(l10n.timeRange(TimeRangeKind.thisMonth)),
+              ),
+              ButtonSegment(
+                value: TimeRangeKind.lastMonth,
+                label: Text(l10n.timeRange(TimeRangeKind.lastMonth)),
+              ),
+              ButtonSegment(
+                value: TimeRangeKind.last7Days,
+                label: Text(l10n.timeRange(TimeRangeKind.last7Days)),
+              ),
             ],
             // 自定义区间时不高亮任一常用项
             selected: isCustom ? <TimeRangeKind>{} : {range.kind},
@@ -44,7 +58,7 @@ class TimeRangeSelector extends ConsumerWidget {
           label: Text(
             isCustom
                 ? '${_short(range.customStart!.month)}/${_short(range.customStart!.day)}-${_short(range.customEnd!.month)}/${_short(range.customEnd!.day)}'
-                : '自定义',
+                : l10n.timeRange(TimeRangeKind.custom),
             style: const TextStyle(fontSize: 12),
           ),
           onPressed: () async {

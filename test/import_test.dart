@@ -31,7 +31,13 @@ void main() {
       const csv = 'id,amount,date\n1,10.00,2026-01-02\n';
       expect(
         () => parseImportContent(csv, fileName: 'bad.csv'),
-        throwsA(isA<FormatException>()),
+        throwsA(
+          isA<ImportException>().having(
+            (e) => e.code,
+            'code',
+            ImportErrorCode.csvMissingColumns,
+          ),
+        ),
       );
     });
 

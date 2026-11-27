@@ -9,6 +9,7 @@ import '../models/category.dart';
 import '../models/currency.dart';
 import '../models/recurring_rule.dart';
 import '../models/transaction.dart';
+import '../preset_categories.dart';
 
 /// Hive 盒子访问入口。initDatabase 完成前不可使用。
 class Db {
@@ -44,26 +45,8 @@ class PresetCurrencies {
   ];
 }
 
-/// 预设分类（首启写入，isPreset=true 禁止删除）。
-class PresetCategories {
-  static const List<({String name, int type, String icon})> data = [
-    // 支出
-    (name: '餐饮', type: 0, icon: '🍜'),
-    (name: '交通', type: 0, icon: '🚌'),
-    (name: '购物', type: 0, icon: '🛍️'),
-    (name: '居住', type: 0, icon: '🏠'),
-    (name: '娱乐', type: 0, icon: '🎮'),
-    (name: '医疗', type: 0, icon: '💊'),
-    (name: '教育', type: 0, icon: '📚'),
-    (name: '其他', type: 0, icon: '📦'),
-    // 收入
-    (name: '工资', type: 1, icon: '💼'),
-    (name: '奖金', type: 1, icon: '🧧'),
-    (name: '兼职', type: 1, icon: '💻'),
-    (name: '理财', type: 1, icon: '📈'),
-    (name: '其他', type: 1, icon: '📦'),
-  ];
-}
+/// 预设分类（首启写入，isPreset=true 禁止删除；展示名随语言变化）。
+/// 分类的稳定标识与三语名称表见 `lib/data/preset_categories.dart`。
 
 /// 初始化本地数据库（在 runApp 前调用一次）。
 Future<void> initDatabase() async {
@@ -108,16 +91,39 @@ Future<void> _openBoxesAndSeed() async {
 }
 
 Future<void> _seedPresetCategoriesIfNeeded() async {
-  if (Db.categories.isNotEmpty) return;
-  for (final item in PresetCategories.data) {
-    await Db.categories.add(
-      Category(
-        name: item.name,
-        type: item.type,
-        icon: item.icon,
-        isPreset: true,
-      ),
-    );
+  if (Db.categories.isEmpty) {
+    for (final item in PresetCategories.data) {
+      await Db.categories.add(
+        Category(
+          name: item.zh,
+          type: item.type,
+          icon: item.icon,
+          isPreset: true,
+          presetKey: item.key,
+        ),
+      );
+    }
+    return;
+  }
+  // v3.4 迁移：老版本的预设分类只有中文名，没有 presetKey。
+  // 按「类型 + 中文名」补上标识（幂等：已补齐的不会被重复处理）。
+  final knownKeys = {
+    for (final c in Db.categories.values)
+      if (c.presetKey != null) c.presetKey!,
+  };
+  for (final spec in PresetCategories.data) {
+    if (knownKeys.contains(spec.key)) continue;
+    Category? legacy;
+    for (final c in Db.categories.values) {
+      if (c.isPreset && c.type == spec.type && c.name == spec.zh) {
+        legacy = c;
+        break;
+      }
+    }
+    if (legacy == null) continue;
+    legacy.presetKey = spec.key;
+    await Db.categories.put(legacy.key as int, legacy);
+    knownKeys.add(spec.key);
   }
 }
 

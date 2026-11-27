@@ -12,8 +12,11 @@ class Category extends HiveObject {
     required this.type,
     this.icon,
     this.isPreset = false,
+    this.presetKey,
   });
 
+  /// 存储名。预设分类也保留一份（旧版本写入的中文名），展示时优先按
+  /// [presetKey] 取当前语言的名字；自建分类直接用这个名称。
   @HiveField(0)
   String name;
 
@@ -28,6 +31,11 @@ class Category extends HiveObject {
   /// 是否预设：预设分类禁止删除
   @HiveField(3)
   bool isPreset;
+
+  /// 预设分类的稳定标识（如 'food'），自建分类为空。
+  /// v3.4 新增；旧记录缺失时保持不变，由迁移按类型+名称补齐。
+  @HiveField(4)
+  String? presetKey;
 
   TransactionType get transactionType => TransactionType.fromIndex(type);
 

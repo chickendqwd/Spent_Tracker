@@ -6,6 +6,7 @@ import '../../core/utils/money_util.dart';
 import '../../data/models/budget.dart';
 import '../../data/models/category.dart';
 import '../../data/models/currency.dart';
+import '../../l10n/l10n.dart';
 import '../../state/budget_providers.dart';
 import '../../state/category_providers.dart';
 import '../../state/currency_providers.dart';
@@ -17,6 +18,7 @@ class BudgetSettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final budgets = ref.watch(effectiveBudgetsProvider);
     final categories = ref.watch(categoryProvider);
     final categoryByKey = {for (final c in categories) c.key as int: c};
@@ -25,23 +27,24 @@ class BudgetSettingsPage extends ConsumerWidget {
     final base = ref.watch(baseCurrencyProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('预算设置')),
+      appBar: AppBar(title: Text(l10n.budgetsTitle)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
-          Text('当前月：$month', style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            l10n.budgetsCurrentMonth(month),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           const SizedBox(height: 4),
           Text(
-            '金额按当前基准币种（${base.name}）录入与显示。'
-            '当月未设置预算时，自动沿用最近一个设置过预算的月份；'
-            '想要「不设限制」请删除该月预算。',
+            l10n.budgetsIntro(currencyDisplayName(l10n, base)),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
           if (budgets.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(child: Text('本月尚未设置预算\n点右下角「+」添加')),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              child: Center(child: Text(l10n.budgetsEmpty)),
             )
           else
             for (final b in budgets)
@@ -49,15 +52,14 @@ class BudgetSettingsPage extends ConsumerWidget {
                 budget: b,
                 categoryByKey: categoryByKey,
                 currencies: currencies,
-                symbol: base.symbol,
-                baseCode: base.code,
+                base: base,
               ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _add(context, ref),
         icon: const Icon(Icons.add),
-        label: const Text('新增预算'),
+        label: Text(l10n.budgetsAdd),
       ),
     );
   }
@@ -69,8 +71,7 @@ class BudgetSettingsPage extends ConsumerWidget {
       context: context,
       builder: (_) => _BudgetDialog(
         categories: ref.read(categoryProvider),
-        symbol: base.symbol,
-        baseCode: base.code,
+        base: base,
       ),
     );
     if (result == null || !context.mounted) return;
@@ -100,22 +101,27 @@ class _BudgetTile extends ConsumerWidget {
     required this.budget,
     required this.categoryByKey,
     required this.currencies,
-    required this.symbol,
-    required this.baseCode,
+    required this.base,
   });
 
   final Budget budget;
   final Map<int, Category> categoryByKey;
   final List<Currency> currencies;
-  final String symbol;
-  final String baseCode;
+  final Currency base;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final isTotal = budget.budgetType == BudgetType.total;
+    final category = budget.categoryId == null
+        ? null
+        : categoryByKey[budget.categoryId];
+    final name = category == null && budget.categoryId != null
+        ? l10n.commonUnknown
+        : categoryDisplayName(l10n, category);
     final label = isTotal
-        ? '总预算'
-        : '分类预算 · ${budget.categoryId == null ? '未分类' : (categoryByKey[budget.categoryId]?.name ?? '未知')}';
+        ? l10n.budgetTypeTotal
+        : l10n.budgetsCategoryWith(name);
     // 存储是 SGD 分，展示按当前基准币种换算
     final amountInBase = budgetCentsInBase(currencies, budget.amount);
 
@@ -126,23 +132,23 @@ class _BudgetTile extends ConsumerWidget {
           isTotal ? Icons.savings_outlined : Icons.category_outlined,
         ),
         title: Text(label),
-        subtitle: Text('所属月：${budget.month}'),
+        subtitle: Text(l10n.budgetsMonthLabel(budget.month)),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              MoneyUtil.format(amountInBase, symbol: '$symbol '),
+              MoneyUtil.format(amountInBase, symbol: '${base.symbol} '),
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 4),
             IconButton(
               icon: const Icon(Icons.edit_outlined),
-              tooltip: '编辑',
+              tooltip: l10n.commonEdit,
               onPressed: () => _edit(context, ref),
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline),
-              tooltip: '删除',
+              tooltip: l10n.commonDelete,
               onPressed: () => _delete(context, ref),
             ),
           ],
@@ -157,8 +163,7 @@ class _BudgetTile extends ConsumerWidget {
       context: context,
       builder: (_) => _BudgetDialog(
         categories: ref.read(categoryProvider),
-        symbol: symbol,
-        baseCode: baseCode,
+        base: base,
         initialType: budget.budgetType,
         initialAmount: MoneyUtil.inputText(amountInBase),
         initialCategoryId: budget.categoryId,
@@ -174,22 +179,23 @@ class _BudgetTile extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除这笔预算？'),
-        content: const Text('删除后仅影响后续，不影响历史账目。'),
+        title: Text(l10n.budgetsDeleteTitle),
+        content: Text(l10n.budgetsDeleteBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('删除'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -214,8 +220,7 @@ class _BudgetFormResult {
 class _BudgetDialog extends StatefulWidget {
   const _BudgetDialog({
     required this.categories,
-    required this.symbol,
-    required this.baseCode,
+    required this.base,
     this.initialType = BudgetType.total,
     this.initialAmount,
     this.initialCategoryId,
@@ -223,9 +228,8 @@ class _BudgetDialog extends StatefulWidget {
 
   final List<Category> categories;
 
-  /// 当前基准币种的符号与代码，金额按基准币种录入
-  final String symbol;
-  final String baseCode;
+  /// 当前基准币种，金额按基准币种录入
+  final Currency base;
   final BudgetType initialType;
   final String? initialAmount;
   final int? initialCategoryId;
@@ -257,12 +261,13 @@ class _BudgetDialogState extends State<_BudgetDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final expenseCategories = widget.categories
         .where((c) => c.type == 0)
         .toList(growable: false);
 
     return AlertDialog(
-      title: const Text('预算'),
+      title: Text(l10n.budgetsDialogTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -270,11 +275,14 @@ class _BudgetDialogState extends State<_BudgetDialog> {
           children: [
             SegmentedButton<BudgetType>(
               showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(value: BudgetType.total, label: Text('总预算')),
+              segments: [
+                ButtonSegment(
+                  value: BudgetType.total,
+                  label: Text(l10n.budgetTypeTotal),
+                ),
                 ButtonSegment(
                   value: BudgetType.category,
-                  label: Text('分类预算'),
+                  label: Text(l10n.budgetTypeCategory),
                 ),
               ],
               selected: {_type},
@@ -296,17 +304,20 @@ class _BudgetDialogState extends State<_BudgetDialog> {
                 ),
               ],
               decoration: InputDecoration(
-                labelText: '金额（${widget.baseCode}）',
-                prefixText: '${widget.symbol} ',
+                labelText: l10n.budgetsAmountLabel(widget.base.code),
+                prefixText: '${widget.base.symbol} ',
                 border: const OutlineInputBorder(),
               ),
             ),
             if (_type == BudgetType.category) ...[
               const SizedBox(height: 16),
-              const Text('分类', style: TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                l10n.commonCategory,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 8),
               if (expenseCategories.isEmpty)
-                const Text('请先添加支出分类')
+                Text(l10n.budgetsAddExpenseFirst)
               else
                 Wrap(
                   spacing: 8,
@@ -315,7 +326,7 @@ class _BudgetDialogState extends State<_BudgetDialog> {
                     for (final c in expenseCategories)
                       ChoiceChip(
                         avatar: Text(c.displayIcon),
-                        label: Text(c.name),
+                        label: Text(categoryDisplayName(l10n, c)),
                         selected: c.key == _categoryId,
                         onSelected: (_) =>
                             setState(() => _categoryId = c.key as int),
@@ -329,14 +340,14 @@ class _BudgetDialogState extends State<_BudgetDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           onPressed: () {
             final cents = MoneyUtil.parseToCents(_amountController.text);
             if (cents == null || cents <= 0) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('请输入有效金额')),
+                SnackBar(content: Text(l10n.budgetsInvalidAmount)),
               );
               return;
             }
@@ -353,7 +364,7 @@ class _BudgetDialogState extends State<_BudgetDialog> {
               ),
             );
           },
-          child: const Text('保存'),
+          child: Text(l10n.commonSave),
         ),
       ],
     );

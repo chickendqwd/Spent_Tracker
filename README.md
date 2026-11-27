@@ -68,6 +68,14 @@ A personal expense tracker for recording spending and income, with time-based an
 - **New entries inherit the base currency**: after switching to JPY a new entry defaults to JPY
 - **JPY symbol is now 円**: no longer shares ¥ with CNY, and entries stored by older versions are migrated on launch
 
+### v3.4 — Three languages, safer imports, instant "view all"
+- **Chinese / English / Japanese UI**: the whole interface follows the system language by default, and Settings → Language pins one of 中文 / English / 日本語 (or returns to "follow system"); switching applies immediately without restarting the app
+- **Preset categories follow the language**: each of the 13 preset categories now carries a stable `presetKey` (food, transport, …), so its display name is taken from the current language while the stored entry keeps the same category; older databases are migrated on launch, and custom categories keep the name you typed
+- **Neutral export identifiers**: CSV/JSON backups now write `type` as `expense`/`income`, plus `categoryKey` (preset key) next to the human-readable `typeName` / `categoryName`. Importing an English backup into a Chinese UI (or the reverse) still lands in the right category instead of "Uncategorized"; older backups using Chinese type labels and a single `category` column still import
+- **GBK CSV import**: files are decoded in the order UTF-8 BOM → UTF-16 BOM → strict UTF-8 → GBK → lenient UTF-8, so CSVs exported by Windows Excel no longer arrive as gibberish; import errors are now typed codes (unsupported file / invalid JSON / empty CSV / missing columns / bad row) rendered in the current language
+- **Search covers more**: the note, the category's displayed name in the current language, the amount as displayed, and the currency code or symbol all match as substrings (case-insensitive); a query that parses as an amount also matches it exactly, and duplicate-key handling is now language-neutral
+- **"View all" on the overview**: the recent-entries card has a View all button that opens the full transaction list, while the card itself keeps showing the latest 5
+
 ## Tech stack
 
 | Purpose | Choice |
@@ -110,7 +118,7 @@ test/
 
 | Platform | File | Install |
 |---|---|---|
-| Android | [SpentTracker-3.3.2-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.3.2-android.apk) (arm64, 19 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
+| Android | [SpentTracker-3.4-android.apk](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-3.4-android.apk) (arm64, 19 MB) | Transfer to the phone and open it; allow "install unknown apps" when prompted |
 | iOS | [SpentTracker-unsigned.ipa](https://github.com/chickendqwd/Spent_Tracker/releases/latest/download/SpentTracker-unsigned.ipa) | Unsigned build: sign it on the iPhone with iLoader + SideStore (see below) |
 
 All builds are attached to [Releases](https://github.com/chickendqwd/Spent_Tracker/releases). The APK is signed with the development key, which is fine for testing but means a build produced on another machine cannot be installed over it.
@@ -145,7 +153,7 @@ Note: reinstalling (uninstall then install) clears the local Hive data; an upgra
 
 ```bash
 flutter analyze   # static analysis
-flutter test      # 62 tests: 51 logic/repository tests, 9 UI interaction tests, 2 appearance persistence tests
+flutter test      # 67 tests: 54 logic/repository tests, 11 UI interaction tests, 2 appearance persistence tests
 ```
 
 Current status: `flutter analyze` reports no issues; `flutter test` passes 62/62. `flutter build windows --debug` also succeeds, which confirms the native file-picker plugin compiles.
@@ -173,6 +181,7 @@ Current status: `flutter analyze` reports no issues; `flutter test` passes 62/62
 | `v3.3` | Switchable base currency with cross-rate conversion, JPY preset and online update, unified currency symbols, budget inheritance rule stated in-line |
 | `v3.3.1` | Trend chart defaults to this week, with weekday characters under each date in the week view |
 | `v3.3.2` | Trend charts cover the full week/month with the line stopping at today, base currency switch now refreshes star and symbols live, new entries inherit the base currency, JPY symbol changed to 円 |
+| `v3.4` | Chinese/English/Japanese UI with preset categories following the language, neutral export identifiers that survive cross-language import, GBK CSV import, wider search matching, View all from the overview |
 
 ## Known limitations
 

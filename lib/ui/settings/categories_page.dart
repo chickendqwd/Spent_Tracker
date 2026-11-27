@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/icon_util.dart';
 import '../../data/models/category.dart';
-import '../../data/models/transaction_type.dart';
+import '../../l10n/l10n.dart';
 import '../../state/category_providers.dart';
 
 /// 设置 / 分类管理页：预设分类开箱即用，自定义分类可增删改。
@@ -51,8 +51,11 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
     final type = _tab;
     final result = await showDialog<(String, String?)>(
       context: context,
-      builder: (ctx) =>
-          _CategoryDialog(title: '新增分类', type: type, iconChoices: _iconChoices),
+      builder: (ctx) => _CategoryDialog(
+        title: context.l10n.categoriesNewTitle,
+        type: type,
+        iconChoices: _iconChoices,
+      ),
     );
     if (result == null || !mounted) return;
     final (name, icon) = result;
@@ -63,7 +66,7 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
     final result = await showDialog<(String, String?)>(
       context: context,
       builder: (ctx) => _CategoryDialog(
-        title: '编辑分类',
+        title: context.l10n.categoriesEditTitle,
         type: category.type,
         initialName: category.name,
         initialIcon: category.displayIcon,
@@ -76,22 +79,25 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
   }
 
   Future<void> _deleteCategory(Category category) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('删除分类「${category.name}」？'),
-        content: const Text('该分类下的历史账目将变为「未分类」，此操作不可恢复。'),
+        title: Text(l10n.categoriesDeleteTitle(
+          categoryDisplayName(l10n, category),
+        )),
+        content: Text(l10n.categoriesDeleteBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('删除'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -102,20 +108,21 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final categories = ref.watch(categoryProvider);
     final list = categories.where((c) => c.type == _tab).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('分类管理')),
+      appBar: AppBar(title: Text(l10n.categoriesTitle)),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: SegmentedButton<int>(
               showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(value: 0, label: Text('支出分类')),
-                ButtonSegment(value: 1, label: Text('收入分类')),
+              segments: [
+                ButtonSegment(value: 0, label: Text(l10n.categoriesExpenseTab)),
+                ButtonSegment(value: 1, label: Text(l10n.categoriesIncomeTab)),
               ],
               selected: {_tab},
               onSelectionChanged: (s) => setState(() => _tab = s.first),
@@ -137,8 +144,10 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
                         style: const TextStyle(fontSize: 18),
                       ),
                     ),
-                    title: Text(c.name),
-                    subtitle: c.isPreset ? const Text('预设分类') : null,
+                    title: Text(categoryDisplayName(l10n, c)),
+                    subtitle: c.isPreset
+                        ? Text(l10n.categoriesPresetLabel)
+                        : null,
                     trailing: c.isPreset
                         ? null
                         : Row(
@@ -146,12 +155,12 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
                             children: [
                               IconButton(
                                 icon: const Icon(Icons.edit_outlined),
-                                tooltip: '编辑',
+                                tooltip: l10n.commonEdit,
                                 onPressed: () => _editCategory(c),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete_outline),
-                                tooltip: '删除',
+                                tooltip: l10n.commonDelete,
                                 onPressed: () => _deleteCategory(c),
                               ),
                             ],
@@ -165,7 +174,9 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addCategory,
         icon: const Icon(Icons.add),
-        label: Text(_tab == 0 ? '新增支出分类' : '新增收入分类'),
+        label: Text(
+          _tab == 0 ? l10n.categoriesAddExpense : l10n.categoriesAddIncome,
+        ),
       ),
     );
   }
@@ -223,7 +234,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
       } else if (value.trim().isEmpty) {
         _iconError = null;
       } else {
-        _iconError = '请输入 1 个 emoji（最多 2 个字符）';
+        _iconError = context.l10n.categoriesCustomIconInvalid;
       }
     });
   }
@@ -231,7 +242,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   void _submit() {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      setState(() => _nameError = '请输入分类名称');
+      setState(() => _nameError = context.l10n.categoriesNameEmpty);
       return;
     }
     Navigator.of(context).pop<(String, String?)>((name, _icon));
@@ -239,6 +250,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final textTheme = Theme.of(context).textTheme;
     return AlertDialog(
       title: Text(widget.title),
@@ -248,7 +260,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '所属类型：${TransactionType.fromIndex(widget.type).label}',
+              l10n.categoriesBelongsTo(l10n.txTypeByIndex(widget.type)),
               style: textTheme.bodySmall?.copyWith(color: context.palette.muted),
             ),
             const SizedBox(height: 12),
@@ -256,14 +268,14 @@ class _CategoryDialogState extends State<_CategoryDialog> {
               controller: _nameController,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: '分类名称',
-                hintText: '如：宠物、健身',
+                labelText: l10n.categoriesNameLabel,
+                hintText: l10n.categoriesNameHint,
                 errorText: _nameError,
                 border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
-            Text('图标', style: textTheme.titleSmall),
+            Text(l10n.categoriesIconLabel, style: textTheme.titleSmall),
             const SizedBox(height: 8),
             SizedBox(
               height: 132,
@@ -297,8 +309,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
               controller: _iconController,
               onChanged: _onCustomIconChanged,
               decoration: InputDecoration(
-                labelText: '自定义图标（可选）',
-                hintText: '输入 1 个 emoji，如 🐹',
+                labelText: l10n.categoriesCustomIconLabel,
+                hintText: l10n.categoriesCustomIconHint,
                 errorText: _iconError,
                 border: const OutlineInputBorder(),
                 isDense: true,
@@ -308,7 +320,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
             Row(
               children: [
                 Text(
-                  '当前：',
+                  l10n.categoriesCurrent,
                   style: textTheme.bodySmall?.copyWith(
                     color: context.palette.muted,
                   ),
@@ -322,9 +334,9 @@ class _CategoryDialogState extends State<_CategoryDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+          child: Text(l10n.commonCancel),
         ),
-        FilledButton(onPressed: _submit, child: const Text('保存')),
+        FilledButton(onPressed: _submit, child: Text(l10n.commonSave)),
       ],
     );
   }

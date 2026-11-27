@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../analysis/annual_page.dart';
 import 'appearance_page.dart';
 import 'budget_settings_page.dart';
@@ -7,57 +8,68 @@ import 'categories_page.dart';
 import 'currency_page.dart';
 import 'export_page.dart';
 import 'import_page.dart';
+import 'language_page.dart';
 import 'recurring_rules_page.dart';
 
-/// 设置主页（v2）：分类管理 + 预算设置 + 周期记账 + 货币与汇率 + 数据导出。
+/// 设置主页：语言 + 外观、分类/预算/周期、年报、货币、导入导出。
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text('通用', style: textTheme.labelLarge),
+            child: Text(l10n.settingsGroupGeneral, style: textTheme.labelLarge),
           ),
           _EntryTile(
             icon: Icons.palette_outlined,
-            title: '外观',
-            subtitle: '跟随系统 / 浅色 / 深色',
+            title: l10n.settingsAppearance,
+            subtitle: l10n.settingsAppearanceSubtitle,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const AppearancePage()),
+            ),
+          ),
+          _EntryTile(
+            icon: Icons.translate_outlined,
+            title: l10n.settingsLanguage,
+            subtitle: l10n.settingsLanguageSubtitle,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const LanguagePage()),
             ),
           ),
           const Divider(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text('记账管理', style: textTheme.labelLarge),
+            child:
+                Text(l10n.settingsGroupBookkeeping, style: textTheme.labelLarge),
           ),
           _EntryTile(
             icon: Icons.category_outlined,
-            title: '分类管理',
-            subtitle: '预设 + 自定义分类',
+            title: l10n.settingsCategories,
+            subtitle: l10n.settingsCategoriesSubtitle,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const CategoriesPage()),
             ),
           ),
           _EntryTile(
             icon: Icons.savings_outlined,
-            title: '预算设置',
-            subtitle: '月度总预算与分类预算',
+            title: l10n.settingsBudgets,
+            subtitle: l10n.settingsBudgetsSubtitle,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const BudgetSettingsPage()),
             ),
           ),
           _EntryTile(
             icon: Icons.event_repeat_outlined,
-            title: '周期记账',
-            subtitle: '每周 / 每月 / 每年待记提醒',
+            title: l10n.settingsRecurring,
+            subtitle: l10n.settingsRecurringSubtitle,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const RecurringRulesPage()),
             ),
@@ -65,12 +77,12 @@ class SettingsPage extends StatelessWidget {
           const Divider(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text('分析', style: textTheme.labelLarge),
+            child: Text(l10n.settingsGroupAnalysis, style: textTheme.labelLarge),
           ),
           _EntryTile(
             icon: Icons.insights_outlined,
-            title: '年度报告',
-            subtitle: '全年收支、月度柱状图与分类排行',
+            title: l10n.settingsAnnual,
+            subtitle: l10n.settingsAnnualSubtitle,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const AnnualPage()),
             ),
@@ -78,28 +90,28 @@ class SettingsPage extends StatelessWidget {
           const Divider(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text('数据', style: textTheme.labelLarge),
+            child: Text(l10n.settingsGroupData, style: textTheme.labelLarge),
           ),
           _EntryTile(
             icon: Icons.currency_exchange,
-            title: '货币与汇率',
-            subtitle: '切换基准币种，汇率可手动或联网更新',
+            title: l10n.settingsCurrency,
+            subtitle: l10n.settingsCurrencySubtitle,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const CurrencyPage()),
             ),
           ),
           _EntryTile(
             icon: Icons.ios_share,
-            title: '数据导出',
-            subtitle: '导出 CSV / JSON 备份',
+            title: l10n.settingsExport,
+            subtitle: l10n.settingsExportSubtitle,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ExportPage()),
             ),
           ),
           _EntryTile(
             icon: Icons.file_download_outlined,
-            title: '数据导入',
-            subtitle: '从 CSV / JSON 备份恢复（追加，自动跳过重复）',
+            title: l10n.settingsImport,
+            subtitle: l10n.settingsImportSubtitle,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ImportPage()),
             ),

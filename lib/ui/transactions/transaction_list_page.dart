@@ -4,8 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_util.dart';
 import '../../core/utils/money_util.dart';
+import '../../data/models/category.dart';
+import '../../data/models/currency.dart';
 import '../../data/models/transaction.dart';
+import '../../l10n/l10n.dart';
 import '../../state/category_providers.dart';
+import '../../state/currency_providers.dart';
 import '../../state/transaction_providers.dart';
 import '../../state/time_range_providers.dart';
 import '../widgets/transaction_detail_sheet.dart';
@@ -45,8 +49,10 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final transactions = ref.watch(transactionProvider);
     final categories = ref.watch(categoryProvider);
+    final currencies = ref.watch(currencyProvider);
     final range = ref.watch(dateRangeProvider);
     final categoryByKey = {for (final c in categories) c.key as int: c};
 
@@ -71,24 +77,20 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
           if (_categoryFilter != null && t.categoryId != _categoryFilter) {
             return false;
           }
-          if (query.isNotEmpty) {
-            final catName = t.categoryId == null
-                ? '未分类'
-                : (categoryByKey[t.categoryId]?.name ?? '');
-            final note = t.note ?? '';
-            final amountMatch = queryCents != null && t.amount == queryCents;
-            if (!amountMatch &&
-                !catName.contains(query) &&
-                !note.contains(query)) {
-              return false;
-            }
-          }
-          return true;
+          if (query.isEmpty) return true;
+          return _matches(
+            t,
+            query: query,
+            queryCents: queryCents,
+            categoryByKey: categoryByKey,
+            currencies: currencies,
+            l10n: l10n,
+          );
         })
         .toList(growable: false);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('交易明细')),
+      appBar: AppBar(title: Text(l10n.transactionsTitle)),
       body: Column(
         children: [
           Padding(
@@ -96,7 +98,7 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: '搜索备注、分类或金额',
+                hintText: l10n.transactionsSearchHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _query.isEmpty
                     ? null
@@ -113,9 +115,9 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
               onChanged: (v) => setState(() => _query = v),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: const TimeRangeSelector(),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: TimeRangeSelector(),
           ),
           // 筛选栏：类型 + 分类
           Padding(
@@ -128,10 +130,10 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
                     visualDensity: VisualDensity.compact,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  segments: const [
-                    ButtonSegment(value: null, label: Text('全部')),
-                    ButtonSegment(value: 0, label: Text('支出')),
-                    ButtonSegment(value: 1, label: Text('收入')),
+                  segments: [
+                    ButtonSegment(value: null, label: Text(l10n.transactionsAll)),
+                    ButtonSegment(value: 0, label: Text(l10n.typeExpense)),
+                    ButtonSegment(value: 1, label: Text(l10n.typeIncome)),
                   ],
                   selected: {_typeFilter},
                   onSelectionChanged: (s) => setState(() {
@@ -142,16 +144,18 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
                 const Spacer(),
                 DropdownButton<int?>(
                   value: _categoryFilter,
-                  hint: const Text('全部分类'),
+                  hint: Text(l10n.transactionsAllCategories),
                   items: [
-                    const DropdownMenuItem<int?>(
+                    DropdownMenuItem<int?>(
                       value: null,
-                      child: Text('全部分类'),
+                      child: Text(l10n.transactionsAllCategories),
                     ),
                     for (final c in filterableCategories)
                       DropdownMenuItem<int?>(
                         value: c.key as int,
-                        child: Text('${c.displayIcon} ${c.name}'),
+                        child: Text(
+                          '${c.displayIcon} ${categoryDisplayName(l10n, c)}',
+                        ),
                       ),
                   ],
                   onChanged: (v) => setState(() => _categoryFilter = v),
@@ -163,7 +167,7 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
           // 列表：按日期分组
           Expanded(
             child: filtered.isEmpty
-                ? const Center(child: Text('没有找到匹配的账目'))
+                ? Center(child: Text(l10n.transactionsNoMatch))
                 : ListView.builder(
                     padding: const EdgeInsets.only(bottom: 96),
                     itemCount: _grouped(filtered).length,
@@ -199,8 +203,38 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
     );
   }
 
+  /// 搜索口径（v3.4 B6）：备注、分类展示名、金额显示值、币种代码与符号
+  /// 一律按「包含」匹配（大小写不敏感）；输入能解析为金额时额外做金额精确匹配。
+  /// 分类展示名用当前语言，因此英文界面搜「Food」也能命中预设分类。
+  bool _matches(
+    Transaction t, {
+    required String query,
+    required int? queryCents,
+    required Map<int, Category> categoryByKey,
+    required List<Currency> currencies,
+    required AppLocalizations l10n,
+  }) {
+    final q = query.toLowerCase();
+    final note = (t.note ?? '').toLowerCase();
+    final categoryText = categoryDisplayName(
+      l10n,
+      t.categoryId == null ? null : categoryByKey[t.categoryId],
+    ).toLowerCase();
+    final amountText = MoneyUtil.inputText(t.amount);
+    final symbolText = symbolOf(currencies, t.currency).toLowerCase();
+    final codeText = t.currency.toLowerCase();
+
+    return note.contains(q) ||
+        categoryText.contains(q) ||
+        amountText.contains(q) ||
+        symbolText.contains(q) ||
+        codeText.contains(q) ||
+        (queryCents != null && t.amount == queryCents);
+  }
+
   /// 按日期（倒序）分组：返回 [(表头, 账目列表)]
   List<(String, List<Transaction>)> _grouped(List<Transaction> list) {
+    final l10n = context.l10n;
     final result = <(String, List<Transaction>)>[];
     String? currentKey;
     List<Transaction>? currentItems;
@@ -209,7 +243,7 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
         currentKey = t.date;
         currentItems = [];
         result.add((
-          DateUtil.listHeader(DateUtil.fromDayKey(t.date)),
+          l10n.dateHeader(DateUtil.fromDayKey(t.date)),
           currentItems,
         ));
       }

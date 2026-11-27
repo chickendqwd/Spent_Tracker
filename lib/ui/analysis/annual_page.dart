@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/money_util.dart';
+import '../../l10n/l10n.dart';
 import '../../state/annual_providers.dart';
 import '../../state/currency_providers.dart';
 
@@ -15,12 +16,13 @@ class AnnualPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final summary = ref.watch(annualSummaryProvider);
     final symbol = ref.watch(baseCurrencyProvider).symbol;
     final palette = context.palette;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('年度报告')),
+      appBar: AppBar(title: Text(l10n.annualTitle)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
@@ -29,21 +31,21 @@ class AnnualPage extends ConsumerWidget {
           Row(
             children: [
               _StatCard(
-                label: '全年支出',
+                label: l10n.annualYearlyExpense,
                 amount: summary.totalExpense,
                 color: palette.expense,
                 symbol: symbol,
               ),
               const SizedBox(width: 10),
               _StatCard(
-                label: '全年收入',
+                label: l10n.annualYearlyIncome,
                 amount: summary.totalIncome,
                 color: palette.income,
                 symbol: symbol,
               ),
               const SizedBox(width: 10),
               _StatCard(
-                label: '结余',
+                label: l10n.annualBalance,
                 amount: summary.balance,
                 color: Theme.of(context).colorScheme.onSurface,
                 symbol: symbol,
@@ -57,21 +59,21 @@ class AnnualPage extends ConsumerWidget {
               child: Row(
                 children: [
                   _KeyStat(
-                    label: '记账笔数',
-                    value: '${summary.recordCount} 笔',
+                    label: l10n.annualRecordCount,
+                    value: l10n.commonUnitEntries('${summary.recordCount}'),
                   ),
                   _KeyStat(
-                    label: '月均支出',
+                    label: l10n.annualAvgExpense,
                     value: MoneyUtil.format(
                       summary.averageMonthlyExpense,
                       symbol: symbol,
                     ),
                   ),
                   _KeyStat(
-                    label: '支出最高月',
+                    label: l10n.annualPeakMonth,
                     value: summary.peakExpenseMonth == 0
-                        ? '暂无'
-                        : '${summary.peakExpenseMonth} 月',
+                        ? l10n.commonNone
+                        : l10n.monthShort('${summary.peakExpenseMonth}'),
                   ),
                 ],
               ),
@@ -79,10 +81,10 @@ class AnnualPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           if (summary.recordCount == 0)
-            const Card(
+            Card(
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: Text('该年暂无记录')),
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: Text(l10n.annualNoRecords)),
               ),
             )
           else ...[
@@ -102,25 +104,26 @@ class _YearSwitcher extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final year = ref.watch(annualYearProvider);
     final now = DateTime.now().year;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
-          tooltip: '上一年',
+          tooltip: l10n.annualPrevYear,
           onPressed: () => ref.read(annualYearProvider.notifier).previous(),
           icon: const Icon(Icons.chevron_left),
         ),
         Text(
-          '$year 年',
+          l10n.yearLabelOf(year),
           style: Theme.of(context)
               .textTheme
               .titleLarge
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
         IconButton(
-          tooltip: '下一年',
+          tooltip: l10n.annualNextYear,
           onPressed: year >= now
               ? null
               : () => ref.read(annualYearProvider.notifier).next(),
@@ -218,6 +221,7 @@ class _MonthlyBarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final palette = context.palette;
     var maxCents = 0.0;
     for (final m in summary.months) {
@@ -237,7 +241,7 @@ class _MonthlyBarCard extends StatelessWidget {
               padding: const EdgeInsets.only(left: 8),
               child: Text(
                 // C10：柱状图 X 轴只有月份数字，标题里补上所属年份
-                '月度收支（${summary.year} 年）',
+                l10n.annualChartTitle('${summary.year}'),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
@@ -315,13 +319,13 @@ class _MonthlyBarCard extends StatelessWidget {
               children: [
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
-                  child: _LegendDot(label: '支出', color: palette.expense),
+                  child: _LegendDot(label: l10n.typeExpense, color: palette.expense),
                 ),
                 const SizedBox(width: 16),
-                _LegendDot(label: '收入', color: palette.income),
+                _LegendDot(label: l10n.typeIncome, color: palette.income),
                 const Spacer(),
                 Text(
-                  '单位：$symbol',
+                  l10n.annualUnit(symbol),
                   style: Theme.of(context)
                       .textTheme
                       .bodySmall
@@ -375,6 +379,7 @@ class _CategoryRankCardState extends ConsumerState<_CategoryRankCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final textTheme = Theme.of(context).textTheme;
     final shares = _tab == 0
         ? widget.summary.expenseByCategory
@@ -391,7 +396,7 @@ class _CategoryRankCardState extends ConsumerState<_CategoryRankCard> {
           children: [
             Row(
               children: [
-                Text('分类排行', style: textTheme.titleMedium),
+                Text(l10n.annualCategoryRanking, style: textTheme.titleMedium),
                 const Spacer(),
                 SegmentedButton<int>(
                   showSelectedIcon: false,
@@ -399,9 +404,9 @@ class _CategoryRankCardState extends ConsumerState<_CategoryRankCard> {
                     visualDensity: VisualDensity.compact,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  segments: const [
-                    ButtonSegment(value: 0, label: Text('支出')),
-                    ButtonSegment(value: 1, label: Text('收入')),
+                  segments: [
+                    ButtonSegment(value: 0, label: Text(l10n.typeExpense)),
+                    ButtonSegment(value: 1, label: Text(l10n.typeIncome)),
                   ],
                   selected: {_tab},
                   onSelectionChanged: (s) => setState(() => _tab = s.first),
@@ -413,7 +418,9 @@ class _CategoryRankCardState extends ConsumerState<_CategoryRankCard> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Center(
-                  child: Text('该年暂无${_tab == 0 ? '支出' : '收入'}'),
+                  child: Text(
+                    _tab == 0 ? l10n.annualNoExpense : l10n.annualNoIncome,
+                  ),
                 ),
               )
             else
@@ -434,7 +441,7 @@ class _CategoryRankCardState extends ConsumerState<_CategoryRankCard> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          share.category?.name ?? '未分类',
+                          categoryDisplayName(l10n, share.category),
                           style: textTheme.bodyMedium,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

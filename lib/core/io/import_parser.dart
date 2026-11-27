@@ -4,28 +4,67 @@ import '../../data/models/transaction.dart';
 import '../utils/date_util.dart';
 import '../utils/money_util.dart';
 
-/// 一条可导入的账目（分类尚未映射为 categoryId，先保留名称）。
+/// 一条可导入的账目（分类尚未映射为 categoryId）。
 class ImportCandidate {
   const ImportCandidate({
     required this.transaction,
     required this.categoryName,
     required this.rowNumber,
+    this.categoryKey,
   });
 
   final Transaction transaction;
 
-  /// 导出文件里的分类名；null 表示「未分类」
+  /// 导出文件里的分类展示名（当前语言）；null 表示「未分类」
   final String? categoryName;
+
+  /// 导出文件里的分类中性标识（预设分类的 presetKey，自建分类为空）。
+  /// v3.4 新增；旧备份文件没有这一列。
+  final String? categoryKey;
 
   /// 在源文件中的行号（CSV 含表头，从 1 开始计数），便于定位问题
   final int rowNumber;
 }
 
+/// 文件级错误：无法继续解析。
+enum ImportErrorCode {
+  unsupportedFile,
+  jsonInvalid,
+  jsonNotArray,
+  csvEmpty,
+  csvMissingColumns,
+}
+
+class ImportException implements Exception {
+  const ImportException(this.code, {this.fileName, this.columns = const []});
+
+  final ImportErrorCode code;
+
+  /// unsupportedFile 时的文件名
+  final String? fileName;
+
+  /// csvMissingColumns 时缺少的列名
+  final List<String> columns;
+
+  @override
+  String toString() => 'ImportException($code)';
+}
+
+/// 行级错误：该行被跳过，其余行照常导入。
+enum ImportIssueCode { rowNotObject, invalidType, invalidAmount, invalidDate }
+
 class ImportIssue {
-  const ImportIssue({required this.rowNumber, required this.reason});
+  const ImportIssue({
+    required this.rowNumber,
+    required this.code,
+    this.value = '',
+  });
 
   final int rowNumber;
-  final String reason;
+  final ImportIssueCode code;
+
+  /// 出问题的原始文本（类型 / 金额 / 日期）
+  final String value;
 }
 
 class ImportParseResult {
@@ -44,8 +83,9 @@ class ImportParseResult {
 
 /// 解析 CSV / JSON 备份文件。只做格式与字段校验，不做去重与落库。
 ///
-/// 支持本应用导出的两种格式（字段：type, amount, currency, category, date,
-/// note, createdAt），`type` 兼容「支出/收入」与 0/1，`amount` 为「元」文本。
+/// v3.4 起导出文件使用中性标识：`type` 为 `expense` / `income`，
+/// 分类用 `categoryKey`（presetKey）加 `categoryName`（人可读名称）。
+/// 旧文件（type 为「支出/收入/0/1」、分类只有 `category` 列）继续兼容。
 ImportParseResult parseImportContent(String content, {required String fileName}) {
   // 去掉 UTF-8 BOM，否则 CSV 首列表头会变成 "\uFEFFtype"
   if (content.startsWith('\uFEFF')) content = content.substring(1);
@@ -54,7 +94,10 @@ ImportParseResult parseImportContent(String content, {required String fileName})
       : '';
   if (ext == 'json') return _parseJson(content);
   if (ext == 'csv') return _parseCsvContent(content);
-  throw FormatException('不支持的文件类型：$fileName（仅支持 .csv / .json）');
+  throw ImportException(
+    ImportErrorCode.unsupportedFile,
+    fileName: fileName,
+  );
 }
 
 ImportParseResult _parseJson(String content) {
@@ -62,10 +105,10 @@ ImportParseResult _parseJson(String content) {
   try {
     decoded = jsonDecode(content);
   } catch (e) {
-    throw const FormatException('JSON 格式无法解析，请确认文件完整');
+    throw const ImportException(ImportErrorCode.jsonInvalid);
   }
   if (decoded is! List) {
-    throw const FormatException('JSON 备份应为账目数组（[...]）');
+    throw const ImportException(ImportErrorCode.jsonNotArray);
   }
 
   final candidates = <ImportCandidate>[];
@@ -73,7 +116,9 @@ ImportParseResult _parseJson(String content) {
   for (final (i, item) in decoded.indexed) {
     final rowNumber = i + 1;
     if (item is! Map) {
-      issues.add(ImportIssue(rowNumber: rowNumber, reason: '不是对象'));
+      issues.add(
+        ImportIssue(rowNumber: rowNumber, code: ImportIssueCode.rowNotObject),
+      );
       continue;
     }
     final map = item.map((k, v) => MapEntry(k.toString(), v));
@@ -90,15 +135,18 @@ ImportParseResult _parseJson(String content) {
 ImportParseResult _parseCsvContent(String content) {
   final rows = _splitCsv(content);
   if (rows.isEmpty) {
-    throw const FormatException('CSV 文件为空');
+    throw const ImportException(ImportErrorCode.csvEmpty);
   }
 
-  final header = rows.first.map((h) => h.trim().toLowerCase()).toList();
+  final header =
+      rows.first.map((h) => h.replaceFirst('\uFEFF', '').trim()).toList();
+  final lowerHeader = header.map((h) => h.toLowerCase()).toList();
   final required = ['type', 'amount', 'date'];
-  final missing = required.where((f) => !header.contains(f)).toList();
+  final missing = required.where((f) => !lowerHeader.contains(f)).toList();
   if (missing.isNotEmpty) {
-    throw FormatException(
-      'CSV 缺少必需列：${missing.join('、')}（表头需包含 type, amount, date）',
+    throw ImportException(
+      ImportErrorCode.csvMissingColumns,
+      columns: missing,
     );
   }
 
@@ -123,26 +171,42 @@ ImportParseResult _parseCsvContent(String content) {
   );
 }
 
+/// 中性类型标识与多语标签 → 0/1；无法识别返回 null。
+int? _parseType(String raw) {
+  final v = raw.trim().toLowerCase();
+  switch (v) {
+    case 'expense':
+    case '0':
+    case '支出':
+    case '出費':
+      return 0;
+    case 'income':
+    case '1':
+    case '收入':
+    case '収入':
+      return 1;
+  }
+  return null;
+}
+
+/// 「未分类」在各语言里的写法（旧文件用它表示无分类）。
+bool _isUncategorized(String name) =>
+    name == '未分类' || name == 'Uncategorized' || name == '未分類';
+
 ImportCandidate? _buildCandidate(
   Map<String, Object?> row,
   int rowNumber,
   List<ImportIssue> issues,
 ) {
-  ImportIssue fail(String reason) {
-    final issue = ImportIssue(rowNumber: rowNumber, reason: reason);
-    issues.add(issue);
-    return issue;
+  void fail(ImportIssueCode code, [String value = '']) {
+    issues.add(ImportIssue(rowNumber: rowNumber, code: code, value: value));
   }
 
   // 类型
-  final rawType = (row['type'] ?? '').toString().trim();
-  final int type;
-  if (rawType == '支出' || rawType == '0' || rawType == 'expense') {
-    type = 0;
-  } else if (rawType == '收入' || rawType == '1' || rawType == 'income') {
-    type = 1;
-  } else {
-    fail('无法识别类型「$rawType」');
+  final rawType = (row['type'] ?? '').toString();
+  final type = _parseType(rawType);
+  if (type == null) {
+    fail(ImportIssueCode.invalidType, rawType.trim());
     return null;
   }
 
@@ -150,7 +214,7 @@ ImportCandidate? _buildCandidate(
   final rawAmount = (row['amount'] ?? '').toString().trim();
   final cents = MoneyUtil.parseToCents(rawAmount);
   if (cents == null || cents <= 0) {
-    fail('金额无效「$rawAmount」');
+    fail(ImportIssueCode.invalidAmount, rawAmount);
     return null;
   }
 
@@ -159,7 +223,7 @@ ImportCandidate? _buildCandidate(
   final dateOk = RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(rawDate) &&
       DateTime.tryParse(rawDate) != null;
   if (!dateOk) {
-    fail('日期无效「$rawDate」（应为 yyyy-MM-dd）');
+    fail(ImportIssueCode.invalidDate, rawDate);
     return null;
   }
 
@@ -167,10 +231,13 @@ ImportCandidate? _buildCandidate(
   final rawCurrency = (row['currency'] ?? '').toString().trim();
   final currency = rawCurrency.isEmpty ? 'SGD' : rawCurrency.toUpperCase();
 
-  // 分类名：空或「未分类」均落为未分类
-  final rawCategory = (row['category'] ?? '').toString().trim();
+  // 分类：新文件用 categoryKey（中性）+ categoryName（展示名）；
+  // 旧文件只有 category 名称列
+  final rawKey = (row['categoryKey'] ?? '').toString().trim();
+  final rawName = (row['categoryName'] ?? row['category'] ?? '').toString().trim();
+  final categoryKey = rawKey.isEmpty ? null : rawKey;
   final categoryName =
-      (rawCategory.isEmpty || rawCategory == '未分类') ? null : rawCategory;
+      (rawName.isEmpty || _isUncategorized(rawName)) ? null : rawName;
 
   final rawNote = (row['note'] ?? '').toString().trim();
   final note = rawNote.isEmpty ? null : rawNote;
@@ -182,10 +249,11 @@ ImportCandidate? _buildCandidate(
   return ImportCandidate(
     rowNumber: rowNumber,
     categoryName: categoryName,
+    categoryKey: categoryKey,
     transaction: Transaction(
       type: type,
       amount: cents,
-      categoryId: null, // 导入时按分类名映射
+      categoryId: null, // 导入时按标识/名称映射
       date: rawDate,
       note: note,
       createdAt: createdAt,

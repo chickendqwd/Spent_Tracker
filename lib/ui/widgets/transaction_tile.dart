@@ -7,6 +7,7 @@ import '../../core/utils/money_util.dart';
 import '../../data/models/category.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/transaction_type.dart';
+import '../../l10n/l10n.dart';
 import '../../state/currency_providers.dart';
 
 /// 单条账目展示（总览「最近记录」与「明细」列表共用）。
@@ -27,6 +28,7 @@ class TransactionTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final isExpense = transaction.transactionType == TransactionType.expense;
     final prefix = isExpense
         ? AppConstants.expensePrefix
@@ -46,7 +48,7 @@ class TransactionTile extends ConsumerWidget {
           style: const TextStyle(fontSize: 18),
         ),
       ),
-      title: Text(category?.name ?? '未分类'),
+      title: Text(categoryDisplayName(l10n, category)),
       subtitle: transaction.note == null || transaction.note!.isEmpty
           ? null
           : Text(

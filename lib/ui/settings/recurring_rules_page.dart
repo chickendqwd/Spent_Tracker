@@ -9,6 +9,7 @@ import '../../data/models/category.dart';
 import '../../data/models/currency.dart';
 import '../../data/models/recurring_rule.dart';
 import '../../data/models/transaction_type.dart';
+import '../../l10n/l10n.dart';
 import '../../state/category_providers.dart';
 import '../../state/currency_providers.dart';
 import '../../state/recurring_rule_providers.dart';
@@ -20,6 +21,7 @@ class RecurringRulesPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final rules = ref.watch(recurringRuleProvider);
     final categories = ref.watch(categoryProvider);
     final currencies = ref.watch(currencyProvider);
@@ -27,28 +29,28 @@ class RecurringRulesPage extends ConsumerWidget {
     final currencyByCode = {for (final c in currencies) c.code: c};
 
     return Scaffold(
-      appBar: AppBar(title: const Text('周期记账')),
+      appBar: AppBar(title: Text(l10n.recurringTitle)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
           Text(
-            '设置周期规则后，到期日在总览页出现「今日待记」提示条，'
-            '点击预填录入并手动确认入账（不自动记账）。',
+            l10n.recurringIntro,
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
           if (rules.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(child: Text('尚未设置周期规则\n点右下角「+」添加')),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              child: Center(child: Text(l10n.recurringEmpty)),
             )
           else
             for (final r in rules)
               _RuleTile(
                 rule: r,
-                categoryName: r.categoryId == null
-                    ? '未分类'
-                    : (categoryByKey[r.categoryId]?.name ?? '未分类'),
+                categoryName: categoryDisplayName(
+                  l10n,
+                  r.categoryId == null ? null : categoryByKey[r.categoryId],
+                ),
                 symbol: currencyByCode[r.currency]?.symbol ??
                     symbolOf(currencies, r.currency),
               ),
@@ -57,7 +59,7 @@ class RecurringRulesPage extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _add(context, ref),
         icon: const Icon(Icons.add),
-        label: const Text('新增规则'),
+        label: Text(l10n.recurringAdd),
       ),
     );
   }
@@ -100,9 +102,10 @@ class _RuleTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final isExpense = rule.type == TransactionType.expense.index;
     final prefix = isExpense ? '-' : '+';
-    final desc = _frequencyDesc(rule);
+    final desc = _frequencyDesc(l10n, rule);
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -125,7 +128,7 @@ class _RuleTile extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  rule.active ? '启用中' : '已停用',
+                  rule.active ? l10n.recurringActive : l10n.recurringInactive,
                   style: TextStyle(
                     color: rule.active
                         ? context.palette.muted
@@ -141,12 +144,12 @@ class _RuleTile extends ConsumerWidget {
               ],
             ),
             Text(
-              '${rule.recurringFrequency.label} · $categoryName'
+              '${l10n.frequency(rule.recurringFrequency)} · $categoryName'
               '${rule.note == null || rule.note!.isEmpty ? '' : ' · ${rule.note}'}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             Text(
-              '$desc · 开始 ${rule.startDate}',
+              '$desc · ${l10n.recurringStartLabel(rule.startDate)}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: context.palette.muted,
                   ),
@@ -156,12 +159,12 @@ class _RuleTile extends ConsumerWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
-                  tooltip: '编辑',
+                  tooltip: l10n.recurringEditTooltip,
                   onPressed: () => _edit(context, ref),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
-                  tooltip: '删除',
+                  tooltip: l10n.commonDelete,
                   onPressed: () => _delete(context, ref),
                 ),
               ],
@@ -172,14 +175,19 @@ class _RuleTile extends ConsumerWidget {
     );
   }
 
-  String _frequencyDesc(RecurringRule r) {
+  String _frequencyDesc(AppLocalizations l10n, RecurringRule r) {
     switch (r.recurringFrequency) {
       case RecurringFrequency.weekly:
-        return '每周 ${'周一二三四五六日'[r.dayValue - 1]}';
+        return l10n.recurringDescWeekly(
+          l10n.weekdayName(r.dayValue),
+        );
       case RecurringFrequency.monthly:
-        return '每月 ${r.dayValue} 号';
+        return l10n.recurringDescMonthly('${r.dayValue}');
       case RecurringFrequency.yearly:
-        return '每年 ${DateUtil.fromDayKey(r.startDate).month} 月 ${r.dayValue} 号';
+        return l10n.recurringDescYearly(
+          '${DateUtil.fromDayKey(r.startDate).month}',
+          '${r.dayValue}',
+        );
     }
   }
 
@@ -212,22 +220,23 @@ class _RuleTile extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除这条规则？'),
-        content: const Text('删除后仅影响后续提醒，不影响已记账目。'),
+        title: Text(l10n.recurringDeleteTitle),
+        content: Text(l10n.recurringDeleteBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('删除'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -325,12 +334,13 @@ class _RuleDialogState extends State<_RuleDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final typeCategories = widget.categories
         .where((c) => c.type == _type)
         .toList(growable: false);
 
     return AlertDialog(
-      title: const Text('周期规则'),
+      title: Text(l10n.recurringDialogTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -338,9 +348,9 @@ class _RuleDialogState extends State<_RuleDialog> {
           children: [
             SegmentedButton<int>(
               showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(value: 0, label: Text('支出')),
-                ButtonSegment(value: 1, label: Text('收入')),
+              segments: [
+                ButtonSegment(value: 0, label: Text(l10n.typeExpense)),
+                ButtonSegment(value: 1, label: Text(l10n.typeIncome)),
               ],
               selected: {_type},
               onSelectionChanged: (s) => setState(() {
@@ -361,44 +371,48 @@ class _RuleDialogState extends State<_RuleDialog> {
                 ),
               ],
               decoration: InputDecoration(
-                labelText: '金额',
-                prefixText:
-                    '${symbolOf(widget.currencies, _currency)} ',
+                labelText: l10n.commonAmount,
+                prefixText: '${symbolOf(widget.currencies, _currency)} ',
                 border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _currency,
-              decoration: const InputDecoration(
-                labelText: '币种',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.commonCurrency,
+                border: const OutlineInputBorder(),
               ),
               items: [
                 for (final c in widget.currencies)
-                  DropdownMenuItem(value: c.code, child: Text('${c.symbol} ${c.name}')),
+                  DropdownMenuItem(
+                    value: c.code,
+                    child: Text(
+                      '${c.symbol} ${currencyDisplayName(l10n, c)}',
+                    ),
+                  ),
               ],
               onChanged: (v) => setState(() => _currency = v ?? 'SGD'),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<RecurringFrequency>(
               initialValue: _frequency,
-              decoration: const InputDecoration(
-                labelText: '频率',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.recurringFrequencyLabel,
+                border: const OutlineInputBorder(),
               ),
-              items: const [
+              items: [
                 DropdownMenuItem(
                   value: RecurringFrequency.weekly,
-                  child: Text('每周'),
+                  child: Text(l10n.freqWeekly),
                 ),
                 DropdownMenuItem(
                   value: RecurringFrequency.monthly,
-                  child: Text('每月'),
+                  child: Text(l10n.freqMonthly),
                 ),
                 DropdownMenuItem(
                   value: RecurringFrequency.yearly,
-                  child: Text('每年'),
+                  child: Text(l10n.freqYearly),
                 ),
               ],
               onChanged: (v) => setState(() {
@@ -412,13 +426,20 @@ class _RuleDialogState extends State<_RuleDialog> {
             if (_frequency == RecurringFrequency.weekly)
               DropdownButtonFormField<int>(
                 initialValue: _dayValue,
-                decoration: const InputDecoration(
-                  labelText: '每周几',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.recurringWeekdayLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 items: [
                   for (var i = 1; i <= 7; i++)
-                    DropdownMenuItem(value: i, child: Text('周${'一二三四五六日'[i - 1]}')),
+                    DropdownMenuItem(
+                      value: i,
+                      child: Text(
+                        l10n.recurringWeekdayOption(
+                          l10n.weekdayName(i),
+                        ),
+                      ),
+                    ),
                 ],
                 onChanged: (v) => setState(() => _dayValue = v ?? 1),
               )
@@ -427,10 +448,10 @@ class _RuleDialogState extends State<_RuleDialog> {
                 controller: _dayController,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  labelText: '几号（1-31）',
-                  helperText: '超过当月天数的日期按月末处理',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.recurringDayLabel,
+                  helperText: l10n.recurringDayHelper,
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (v) {
                   final n = int.tryParse(v);
@@ -442,7 +463,7 @@ class _RuleDialogState extends State<_RuleDialog> {
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    '小月/平年按月末：如 31 号在 4 月记 30 日、2 月记 28 日',
+                    l10n.recurringMonthEndNote,
                     style: TextStyle(
                       fontSize: 11,
                       color: context.palette.muted,
@@ -454,7 +475,9 @@ class _RuleDialogState extends State<_RuleDialog> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.event_outlined),
-              title: Text('开始日期：${DateUtil.listHeader(_startDate)}'),
+              title: Text(
+                l10n.recurringStartDate(l10n.dateHeader(_startDate)),
+              ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
                 final picked = await showDatePicker(
@@ -467,14 +490,13 @@ class _RuleDialogState extends State<_RuleDialog> {
               },
             ),
             const SizedBox(height: 4),
-            if (_type == 0 || _type == 1)
-              _buildCategoryChips(typeCategories),
+            _buildCategoryChips(l10n, typeCategories),
             const SizedBox(height: 12),
             TextField(
               controller: _noteController,
-              decoration: const InputDecoration(
-                labelText: '备注（可选）',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.recurringNoteOptional,
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -483,14 +505,14 @@ class _RuleDialogState extends State<_RuleDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           onPressed: () {
             final cents = MoneyUtil.parseToCents(_amountController.text);
             if (cents == null || cents <= 0) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('请输入有效金额')),
+                SnackBar(content: Text(l10n.budgetsInvalidAmount)),
               );
               return;
             }
@@ -509,23 +531,29 @@ class _RuleDialogState extends State<_RuleDialog> {
               ),
             );
           },
-          child: const Text('保存'),
+          child: Text(l10n.commonSave),
         ),
       ],
     );
   }
 
-  Widget _buildCategoryChips(List<Category> typeCategories) {
+  Widget _buildCategoryChips(
+    AppLocalizations l10n,
+    List<Category> typeCategories,
+  ) {
     if (typeCategories.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 4),
-        child: Text('请先添加该类型分类'),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text(l10n.recurringAddCategoryFirst),
       );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('分类', style: TextStyle(fontWeight: FontWeight.w600)),
+        Text(
+          l10n.commonCategory,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -534,7 +562,7 @@ class _RuleDialogState extends State<_RuleDialog> {
             for (final c in typeCategories)
               ChoiceChip(
                 avatar: Text(c.displayIcon),
-                label: Text(c.name),
+                label: Text(categoryDisplayName(l10n, c)),
                 selected: c.key == _categoryId,
                 onSelected: (_) => setState(() => _categoryId = c.key as int),
               ),

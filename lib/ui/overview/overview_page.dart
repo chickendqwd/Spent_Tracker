@@ -10,6 +10,7 @@ import '../../core/utils/date_util.dart';
 import '../../core/utils/money_util.dart';
 import '../../data/models/recurring_rule.dart';
 import '../../data/models/transaction.dart';
+import '../../l10n/l10n.dart';
 import '../../state/budget_providers.dart';
 import '../../state/category_providers.dart';
 import '../../state/currency_providers.dart';
@@ -17,6 +18,7 @@ import '../../state/recurring_rule_providers.dart';
 import '../../state/summary_providers.dart';
 import '../../state/trend_providers.dart';
 import '../analysis/annual_page.dart';
+import '../transactions/transaction_list_page.dart';
 import '../widgets/add_transaction_sheet.dart';
 import '../widgets/time_range_selector.dart';
 import '../widgets/transaction_detail_sheet.dart';
@@ -30,6 +32,7 @@ class OverviewPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final summary = ref.watch(rangeSummaryProvider);
     final recent = ref.watch(rangeRecentTransactionsProvider);
     final categories = ref.watch(categoryProvider);
@@ -42,10 +45,10 @@ class OverviewPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('总览'),
+        title: Text(l10n.overviewTitle),
         actions: [
           IconButton(
-            tooltip: '年度报告',
+            tooltip: l10n.overviewAnnualTooltip,
             icon: const Icon(Icons.calendar_view_month_outlined),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const AnnualPage()),
@@ -66,21 +69,21 @@ class OverviewPage extends ConsumerWidget {
           Row(
             children: [
               _StatCard(
-                label: '总支出',
+                label: l10n.overviewTotalExpense,
                 amount: summary.totalExpense,
                 color: context.palette.expense,
                 symbol: baseSymbol,
               ),
               const SizedBox(width: 10),
               _StatCard(
-                label: '总收入',
+                label: l10n.overviewTotalIncome,
                 amount: summary.totalIncome,
                 color: context.palette.income,
                 symbol: baseSymbol,
               ),
               const SizedBox(width: 10),
               _StatCard(
-                label: '结余',
+                label: l10n.overviewBalance,
                 amount: summary.balance,
                 color: Theme.of(context).colorScheme.onSurface,
                 symbol: baseSymbol,
@@ -108,14 +111,27 @@ class OverviewPage extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '最近记录',
-                    style: Theme.of(context).textTheme.titleMedium,
+                  Row(
+                    children: [
+                      Text(
+                        l10n.overviewRecent,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const TransactionListPage(),
+                          ),
+                        ),
+                        child: Text(l10n.overviewViewAll),
+                      ),
+                    ],
                   ),
                   if (recent.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Center(child: Text('区间内还没有记录，点右下角「+」记一笔吧')),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(child: Text(l10n.overviewRecentEmpty)),
                     )
                   else
                     for (final t in recent)
@@ -169,7 +185,7 @@ class _TodayDueBanner extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '今日待记 ${rules.length} 笔，点按预填录入',
+                  context.l10n.overviewTodayDue('${rules.length}'),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onPrimaryContainer,
                     fontWeight: FontWeight.w600,
@@ -258,7 +274,10 @@ class _BudgetCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text('本月预算', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  context.l10n.overviewMonthlyBudget,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const Spacer(),
                 Text(
                   '${MoneyUtil.format(used, symbol: symbol)} / ${MoneyUtil.format(budgetAmount, symbol: symbol)}',
@@ -282,7 +301,7 @@ class _BudgetCard extends StatelessWidget {
             if (over) ...[
               const SizedBox(height: 8),
               Text(
-                '已超出预算',
+                context.l10n.overviewOverBudget,
                 style: TextStyle(color: context.palette.expense, fontSize: 12),
               ),
             ],
@@ -302,6 +321,7 @@ class _TrendCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final trend = ref.watch(trendProvider);
     final range = ref.watch(trendRangeProvider);
 
@@ -311,7 +331,8 @@ class _TrendCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('收支趋势', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.overviewTrendTitle,
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 10),
             _TrendRangePicker(
               current: range,
@@ -375,7 +396,7 @@ class _TrendCard extends ConsumerWidget {
                                   ),
                                 ),
                                 Text(
-                                  DateUtil.weekdayChar(trend[i].start),
+                                  l10n.weekdayChar(trend[i].start.weekday),
                                   style: TextStyle(
                                     fontSize: 9,
                                     height: 1.1,
@@ -398,7 +419,7 @@ class _TrendCard extends ConsumerWidget {
                       getTooltipItems: (spots) => [
                         for (final s in spots)
                           LineTooltipItem(
-                            _tooltipText(s, trend),
+                            _tooltipText(l10n, s, trend),
                             TextStyle(color: context.palette.onChartLabel),
                           ),
                       ],
@@ -420,8 +441,8 @@ class _TrendCard extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 8),
-            _legendDot('支出', context.palette.expense),
-            _legendDot('收入', context.palette.income),
+            _legendDot(l10n.typeExpense, context.palette.expense),
+            _legendDot(l10n.typeIncome, context.palette.income),
           ],
         ),
       ),
@@ -429,11 +450,15 @@ class _TrendCard extends ConsumerWidget {
   }
 
   /// 悬浮提示：类型 + 区间 + 金额。
-  String _tooltipText(LineBarSpot spot, List<TrendBucket> trend) {
+  String _tooltipText(
+    AppLocalizations l10n,
+    LineBarSpot spot,
+    List<TrendBucket> trend,
+  ) {
     final i = spot.x.round();
     if (i < 0 || i >= trend.length) return '';
     final b = trend[i];
-    final label = spot.barIndex == 0 ? '支出' : '收入';
+    final label = spot.barIndex == 0 ? l10n.typeExpense : l10n.typeIncome;
     return '$label ${b.rangeLabel}\n${MoneyUtil.format(spot.y.round(), symbol: symbol)}';
   }
 
@@ -522,6 +547,7 @@ class _TrendRangePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final overflowSelected = TrendRange.overflow.contains(current);
     return Wrap(
       spacing: 6,
@@ -530,7 +556,7 @@ class _TrendRangePicker extends StatelessWidget {
       children: [
         for (final r in TrendRange.pinned)
           ChoiceChip(
-            label: Text(r.label),
+            label: Text(l10n.trendRange(r)),
             selected: current == r,
             visualDensity: VisualDensity.compact,
             onSelected: (_) => onChanged(r),
@@ -538,18 +564,18 @@ class _TrendRangePicker extends StatelessWidget {
         if (overflowSelected)
           // 选中长区间时把当前档位显示出来，避免「没有选中项」的错觉
           ChoiceChip(
-            label: Text(current.label),
+            label: Text(l10n.trendRange(current)),
             selected: true,
             visualDensity: VisualDensity.compact,
             onSelected: (_) => onChanged(current),
           ),
         // 「更多…」入口常驻：默认选中近 6 月时也要能切到近 12 月
         PopupMenuButton<TrendRange>(
-          tooltip: '更多区间',
+          tooltip: l10n.trendMoreRanges,
           onSelected: onChanged,
           itemBuilder: (_) => [
             for (final r in TrendRange.overflow)
-              PopupMenuItem(value: r, child: Text(r.label)),
+              PopupMenuItem(value: r, child: Text(l10n.trendRange(r))),
           ],
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -557,7 +583,7 @@ class _TrendRangePicker extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '更多…',
+                  l10n.commonMore,
                   style: TextStyle(
                     fontSize: 13,
                     color: context.palette.muted,
@@ -594,6 +620,7 @@ class _CategoryAnalysisCardState extends ConsumerState<_CategoryAnalysisCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final textTheme = Theme.of(context).textTheme;
     final shares = _tab == 0
         ? widget.summary.expenseByCategory
@@ -610,7 +637,8 @@ class _CategoryAnalysisCardState extends ConsumerState<_CategoryAnalysisCard> {
           children: [
             Row(
               children: [
-                Text('分类分析', style: textTheme.titleMedium),
+                Text(l10n.overviewCategoryAnalysis,
+                    style: textTheme.titleMedium),
                 const Spacer(),
                 SegmentedButton<int>(
                   showSelectedIcon: false,
@@ -618,9 +646,9 @@ class _CategoryAnalysisCardState extends ConsumerState<_CategoryAnalysisCard> {
                     visualDensity: VisualDensity.compact,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  segments: const [
-                    ButtonSegment(value: 0, label: Text('支出')),
-                    ButtonSegment(value: 1, label: Text('收入')),
+                  segments: [
+                    ButtonSegment(value: 0, label: Text(l10n.typeExpense)),
+                    ButtonSegment(value: 1, label: Text(l10n.typeIncome)),
                   ],
                   selected: {_tab},
                   onSelectionChanged: (s) => setState(() => _tab = s.first),
@@ -631,7 +659,13 @@ class _CategoryAnalysisCardState extends ConsumerState<_CategoryAnalysisCard> {
             if (total == 0)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 32),
-                child: Center(child: Text('区间内暂无${_tab == 0 ? '支出' : '收入'}')),
+                child: Center(
+                  child: Text(
+                    _tab == 0
+                        ? l10n.overviewNoExpenseInRange
+                        : l10n.overviewNoIncomeInRange,
+                  ),
+                ),
               )
             else
               SizedBox(
@@ -686,7 +720,7 @@ class _CategoryAnalysisCardState extends ConsumerState<_CategoryAnalysisCard> {
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      share.category?.name ?? '未分类',
+                                      categoryDisplayName(l10n, share.category),
                                       style: textTheme.bodySmall,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
